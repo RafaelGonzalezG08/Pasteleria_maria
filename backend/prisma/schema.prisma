@@ -1,0 +1,352 @@
+// Esquema de base de datos - Cafe Shopping
+// Sigue el modelo de datos definido en la especificacion del proyecto.
+
+generator client {
+  provider      = "prisma-client-js"
+  // Solo Windows: la app de escritorio nunca corre en otro sistema, y sin
+  // esto Prisma tambien genera el motor de Linux (queda pegado de cuando
+  // este proyecto corria en Docker), que pesa ~35 MB de mas en el instalador
+  // sin que nadie lo use.
+  binaryTargets = ["native"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+
+
+
+
+// Estados por los que pasa un pedido antes de llegar al cliente.
+// ENTREGADO no llega a guardarse: al marcarlo, el pedido se borra y la
+// factura queda como el registro de la venta (ver orders.service.ts).
+
+// ---------- Modelos ----------
+
+model User {
+  id           String   @id @default(cuid())
+  nombre       String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String     @default("CAJERO")
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  sales      Sale[]
+  expenses   Expense[]
+  auditLogs  AuditLog[]
+
+  @@map("users")
+}
+
+model Client {
+  id                 String    @id @default(cuid())
+  nombre             String
+  telefono           String
+  email              String?
+  direccion          String?
+  notas              String?
+  lastReminderSentAt DateTime? @map("last_reminder_sent_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  sales Sale[]
+  debts ClientDebt[]
+
+  @@map("clients")
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  sku            String   @unique
+  nombre         String
+  precioUnitario Decimal  @map("precio_unitario")
+  // Costo de adquisicion de la pieza. Solo visible/editable por ADMIN (ver
+  // ProductsController) - se usa para calcular margen en el apartado de Costos.
+  costoUnitario  Decimal  @default(0) @map("costo_unitario")
+  // Material de la pieza (PLATA, ORO, GOLDFILLED, ACERO, OTRO). Alimenta el
+  // filtro del catalogo web y la insignia en la esquina de la foto.
+  material       String   @default("OTRO")
+  stock          Int      @default(0)
+  imageUrl       String?  @map("image_url")
+  // Tallas / medidas que ofrece la pieza (anillos: "5", "6"...; cadenas:
+  // "45 cm"...). JSON serializado como texto (SQLite no tiene tipo Json).
+  // NULL o "[]" = la pieza no maneja tallas.
+  tallas         String?
+  activo         Boolean  @default(true)
+  // Categoria de joya (Anillo, Collar, etc.), asignada SOLA cuando la primera
+  // palabra del nombre coincide exactamente con una categoria existente (ver
+  // ProductsService.clasificarCategoria()). Al borrar la categoria, el producto
+  // queda sin categoria (onDelete: SetNull).
+  categoriaId    String?  @map("categoria_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  saleItems SaleItem[]
+  categoria Category?  @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+
+  @@map("products")
+  @@index([categoriaId])
+}
+
+// Categoria de joya (Anillo, Collar, Aretes, Pulsera, Reloj, ...), que el
+// negocio define a su gusto. Sirve para clasificar y filtrar el inventario.
+model Category {
+  id        String   @id @default(cuid())
+  nombre    String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  products Product[]
+
+  @@map("categories")
+}
+
+model Sale {
+  id         String     @id @default(cuid())
+  fecha      DateTime   @default(now())
+  subtotal   Decimal
+  impuestos  Decimal    @default(0)
+  total      Decimal
+  // Porcentaje de descuento aplicado sobre el bruto de la venta (0-100),
+  // ANTES de calcular impuestos. Se guarda para que la factura ya generada
+  // siga mostrando el mismo descuento aunque cambie despues.
+  descuentoPct Decimal  @default(0) @map("descuento_pct")
+  metodoPago String @map("metodo_pago")
+  userId     String     @map("user_id")
+  clientId   String?    @map("client_id")
+  // Codigo (VNT-XXXX) de la venta hecha desde el punto de venta oculto del
+  // catalogo web. Unico para que el relevo no cree la misma venta dos veces.
+  // null en las ventas normales del mostrador.
+  webCodigo  String?    @unique @map("web_codigo")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  user      User        @relation(fields: [userId], references: [id])
+  client    Client?     @relation(fields: [clientId], references: [id])
+  items     SaleItem[]
+  invoice   Invoice?
+  payments  Payment[]
+  order     Order?
+  debts     ClientDebt[]
+  webOrders WebOrder[]
+
+  @@map("sales")
+  @@index([fecha])
+  @@index([clientId])
+}
+
+model SaleItem {
+  id             String  @id @default(cuid())
+  saleId         String  @map("sale_id")
+  productId      String? @map("product_id")
+  descripcion    String
+  cantidad       Int
+  precioUnitario Decimal @map("precio_unitario")
+  // Copia del costo del producto al momento de la venta (igual que
+  // precioUnitario), para que el margen historico no cambie si luego se
+  // edita el costo del producto en el catalogo.
+  costoUnitario  Decimal @default(0) @map("costo_unitario")
+  total          Decimal
+
+  sale    Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@map("sale_items")
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  saleId         String        @unique @map("sale_id")
+  numero         String        @unique
+  estado         String @default("PENDIENTE")
+  pdfUrl         String?       @map("pdf_url")
+  pngUrl         String?       @map("png_url")
+  sentWhatsappAt DateTime?     @map("sent_whatsapp_at")
+  ultimoError    String?       @map("ultimo_error")
+
+  // Cola de envio por WhatsApp (ver whatsapp-queue.service.ts). El envio ya no
+  // bloquea la peticion: se encola y un proceso en segundo plano lo procesa con
+  // reintentos.
+  whatsappEstado         String?   @map("whatsapp_estado") // EN_COLA | ENVIADA | ERROR | null
+  whatsappIntentos       Int       @default(0) @map("whatsapp_intentos")
+  whatsappProximoIntento DateTime? @map("whatsapp_proximo_intento")
+  whatsappMensaje        String?   @map("whatsapp_mensaje")
+
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  sale Sale @relation(fields: [saleId], references: [id])
+
+  @@map("invoices")
+  @@index([whatsappEstado])
+}
+
+model Payment {
+  id        String     @id @default(cuid())
+  saleId    String     @map("sale_id")
+  amount    Decimal
+  fecha     DateTime   @default(now())
+  metodo    String
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  sale Sale @relation(fields: [saleId], references: [id])
+
+  @@map("payments")
+}
+
+model ClientDebt {
+  id          String      @id @default(cuid())
+  clientId    String      @map("client_id")
+  saleId      String?     @map("sale_id")
+  amountTotal Decimal     @map("amount_total")
+  amountPaid  Decimal     @default(0) @map("amount_paid")
+  dueDate     DateTime?   @map("due_date")
+  status      String @default("PENDIENTE")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  client Client @relation(fields: [clientId], references: [id])
+  // Al borrar la venta se borra su deuda (sales.service.ts ya lo hacia a mano,
+  // y ademas rechaza el borrado si el cliente ya abono algo).
+  sale   Sale?  @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@map("client_debts")
+  @@index([clientId])
+  @@index([status])
+  @@index([saleId])
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  fecha       DateTime @default(now())
+  categoria   String
+  descripcion String
+  monto       Decimal
+  userId      String   @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("expenses")
+  @@index([fecha])
+}
+
+// Pedido pendiente de entregar al cliente.
+//
+// Solo existe mientras la pieza no ha llegado a manos del cliente: al
+// marcarlo ENTREGADO se borra la fila, y la factura de la venta queda como
+// el registro permanente (por eso `onDelete: Cascade` hacia Sale — si se
+// borra la venta, el pedido se va con ella).
+model Order {
+  id           String       @id @default(cuid())
+  saleId       String       @unique @map("sale_id")
+  estado       String @default("PENDIENTE")
+  // Fecha en la que se le prometio la entrega al cliente. Es lo que ordena
+  // el listado y lo que el Dashboard usa para marcar atrasos.
+  fechaEntrega DateTime?    @map("fecha_entrega")
+  notas        String?
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@map("orders")
+  @@index([estado])
+  @@index([fechaEntrega])
+}
+
+// Pedido que llego por el catalogo web, pegando el mensaje de WhatsApp del
+// cliente (ver modulo web-orders).
+//
+// No es un Order comun a proposito: un Order envuelve una Sale ya cobrada en
+// el POS, y un pedido web todavia no es una venta — es una intencion de
+// compra sin cliente identificado (la pagina no pide datos a proposito). El
+// codigo (ej. "PED-K3F7Q2") es el unico hilo entre lo que el cliente escribio
+// por WhatsApp y esta fila.
+model WebOrder {
+  id        String   @id @default(cuid())
+  codigo    String   @unique
+  // Piezas del pedido, serializadas: [{sku,nombre,cantidad,precioUnitario,total}].
+  // SQLite no tiene tipo Json (ver AuditLog.changes para el mismo patron).
+  items     String
+  total     Decimal
+  estado    String   @default("PENDIENTE")
+  // Texto completo tal como se pego, por si el resumen no alcanza (ej. el
+  // cliente agrego una nota debajo del pedido).
+  textoOriginal String @map("texto_original")
+  notas     String?
+  // Venta que se genero al "atender" este pedido (ver web-orders.service.ts
+  // -> atender()). Si esa venta se borra, el pedido web NO desaparece con
+  // ella: solo se queda sin el vinculo (onDelete: SetNull).
+  saleId    String?  @map("sale_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  sale Sale? @relation(fields: [saleId], references: [id], onDelete: SetNull)
+
+  @@map("web_orders")
+  @@index([estado])
+  @@index([saleId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  entity    String
+  entityId  String   @map("entity_id")
+  action    String
+  userId    String?  @map("user_id")
+  // SQLite no tiene tipo Json: se guarda el JSON serializado como texto.
+  // AuditService se encarga de convertirlo en ambos sentidos.
+  changes   String?
+  timestamp DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+  @@index([entity, entityId])
+}
+
+// Perfil unico del negocio (fila singleton) usado en el modulo de Configuracion.
+model BusinessProfile {
+  id           String   @id @default(cuid())
+  nombre       String   @default("Cafe Shopping")
+  logoUrl      String?  @map("logo_url")
+  direccion    String?
+  identifFiscal String? @map("identif_fiscal")
+  tasaImpuesto Decimal  @default(0.18) @map("tasa_impuesto")
+
+  // ----- Datos que solo usa el catalogo web -----
+  // Numero al que llegan los pedidos del catalogo. Es distinto del telefono
+  // de contacto: aqui va el que tiene WhatsApp abierto en el negocio.
+  telefonoWhatsapp String? @map("telefono_whatsapp")
+  // Frase corta bajo el nombre en el catalogo (ej. "Joyeria fina en Santiago").
+  descripcionWeb   String? @map("descripcion_web")
+  // Como pagar por transferencia: banco, tipo de cuenta, numero y a nombre de
+  // quien. Es texto libre porque cada negocio lo escribe a su manera.
+  datosPago        String? @map("datos_pago")
+
+  // Relevo en la nube (opcional) para que los pedidos del catalogo caigan
+  // solos en Pedidos web, sin pegar el mensaje a mano. Ver /cloud-relay en
+  // la raiz del repo. Sin esto, el catalogo sigue funcionando igual, solo
+  // por WhatsApp.
+  relevoPedidosUrl   String? @map("relevo_pedidos_url")
+  relevoPedidosClave String? @map("relevo_pedidos_clave")
+
+  // Publicacion automatica del catalogo a Cloudflare Pages (opcional). Con el
+  // token de API, el Account ID y el nombre del proyecto puestos, la app sube
+  // el sitio por la API de Cloudflare despues de cada regeneracion, asi no
+  // hay que volver a arrastrar el folder cuando algo se agota o cambia. Se
+  // eligio Cloudflare y no Netlify porque el plan gratis de Netlify cambio a
+  // un sistema de creditos que no alcanza para publicar en cada venta.
+  cloudflareApiToken    String? @map("cloudflare_api_token")
+  cloudflareAccountId   String? @map("cloudflare_account_id")
+  cloudflarePagesProject String? @map("cloudflare_pages_project")
+
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("business_profile")
+}

@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "${workspaceFolder}/.claude/run-backend.cmd",
+      "runtimeArgs": [],
+      "port": 3000,
+      "autoPort": false
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "${workspaceFolder}/.claude/run-frontend.cmd",
+      "runtimeArgs": [],
+      "port": 5173,
+      "autoPort": false
+    }
+  ]
+}

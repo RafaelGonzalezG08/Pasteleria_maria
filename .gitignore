@@ -1,0 +1,51 @@
+# Dependencias y compilaciones
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# Variables de entorno y credenciales
+.env
+*.env
+
+# Config local del editor / de Claude Code (rutas propias de cada maquina)
+.claude/settings.local.json
+
+# Archivos pesados y respaldos
+/backups/
+backend/backups/
+*.sql
+*.sql.gz
+
+# ...pero las migraciones de Prisma SI van al repo. La regla "*.sql" de arriba
+# es para los volcados de respaldo (pg_dump), y sin esta excepcion se tragaba
+# tambien las migraciones: al clonar o hacer pull en otra PC llegaba el codigo
+# nuevo pero no el SQL que crea las tablas que ese codigo necesita.
+!backend/prisma/migrations/**/*.sql
+/uploads/
+
+# Archivos de registros y temporales
+*.log
+desktop/dist/
+# Vista previa local del catalogo (se regenera con scripts/preview-catalogo.js)
+backend/.preview-catalogo/
+# Base de datos local de la version nativa (SQLite) y su copia de restauracion
+backend/prisma/*.db
+backend/prisma/*.db-journal
+backend/prisma/*.db.anterior
+# Base de datos temporal de los tests e2e
+backend/test/*.db
+backend/test/*.db-journal
+
+# El seed compila a prisma/dist/ (aislado, ver prisma/tsconfig.seed.json). Esta
+# regla queda como red de seguridad por si algun build vuelve a colar un .js
+# suelto dentro de src/.
+backend/src/**/*.js
+
+# Cliente de Prisma generado solo para leer Postgres durante la migracion
+backend/prisma/cliente-postgres/
+
+# El .exe del agente de WhatsApp SI se versiona (lo necesita el instalador, ver
+# desktop/package.json > extraResources). El .bak que deja el compilador de
+# AutoHotkey, no.
+send_whatsapp_agent.exe.bak

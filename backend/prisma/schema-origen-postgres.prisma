@@ -1,0 +1,267 @@
+// Esquema de base de datos - Cafe Shopping
+// Sigue el modelo de datos definido en la especificacion del proyecto.
+
+// Esquema SOLO PARA LEER la base de PostgreSQL de la version con Docker
+// durante la migracion. No se usa en la app; existe para poder generar un
+// segundo cliente de Prisma que hable Postgres (el cliente normal ya quedo
+// atado a SQLite y rechaza una URL de postgres).
+generator client {
+  provider = "prisma-client-js"
+  output   = "./cliente-postgres"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  ADMIN
+  CAJERO
+  CONTABILIDAD
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TARJETA
+  TRANSFERENCIA
+  CREDITO
+  OTRO
+}
+
+enum EstadoFactura {
+  PENDIENTE
+  GENERADA
+  ENVIADA
+  ERROR
+}
+
+enum EstadoDeuda {
+  PENDIENTE
+  PARCIAL
+  PAGADA
+  VENCIDA
+}
+
+// Estados por los que pasa un pedido antes de llegar al cliente.
+// ENTREGADO no llega a guardarse: al marcarlo, el pedido se borra y la
+// factura queda como el registro de la venta (ver orders.service.ts).
+enum EstadoPedido {
+  PENDIENTE
+  EMPACADO
+  ENTREGADO
+}
+
+// ---------- Modelos ----------
+
+model User {
+  id           String   @id @default(cuid())
+  nombre       String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role     @default(CAJERO)
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  sales      Sale[]
+  expenses   Expense[]
+  auditLogs  AuditLog[]
+
+  @@map("users")
+}
+
+model Client {
+  id                 String    @id @default(cuid())
+  nombre             String
+  telefono           String
+  email              String?
+  direccion          String?
+  notas              String?
+  lastReminderSentAt DateTime? @map("last_reminder_sent_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  sales Sale[]
+  debts ClientDebt[]
+
+  @@map("clients")
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  sku            String   @unique
+  nombre         String
+  precioUnitario Decimal  @map("precio_unitario") @db.Decimal(10, 2)
+  // Costo de adquisicion de la pieza. Solo visible/editable por ADMIN (ver
+  // ProductsController) - se usa para calcular margen en el apartado de Costos.
+  costoUnitario  Decimal  @default(0) @map("costo_unitario") @db.Decimal(10, 2)
+  stock          Int      @default(0)
+  imageUrl       String?  @map("image_url")
+  activo         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  saleItems SaleItem[]
+
+  @@map("products")
+}
+
+model Sale {
+  id         String     @id @default(cuid())
+  fecha      DateTime   @default(now())
+  subtotal   Decimal    @db.Decimal(10, 2)
+  impuestos  Decimal    @default(0) @db.Decimal(10, 2)
+  total      Decimal    @db.Decimal(10, 2)
+  metodoPago MetodoPago @map("metodo_pago")
+  userId     String     @map("user_id")
+  clientId   String?    @map("client_id")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  user     User       @relation(fields: [userId], references: [id])
+  client   Client?    @relation(fields: [clientId], references: [id])
+  items    SaleItem[]
+  invoice  Invoice?
+  payments Payment[]
+  order    Order?
+
+  @@map("sales")
+  @@index([fecha])
+  @@index([clientId])
+}
+
+model SaleItem {
+  id             String  @id @default(cuid())
+  saleId         String  @map("sale_id")
+  productId      String? @map("product_id")
+  descripcion    String
+  cantidad       Int
+  precioUnitario Decimal @map("precio_unitario") @db.Decimal(10, 2)
+  // Copia del costo del producto al momento de la venta (igual que
+  // precioUnitario), para que el margen historico no cambie si luego se
+  // edita el costo del producto en el catalogo.
+  costoUnitario  Decimal @default(0) @map("costo_unitario") @db.Decimal(10, 2)
+  total          Decimal @db.Decimal(10, 2)
+
+  sale    Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@map("sale_items")
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  saleId         String        @unique @map("sale_id")
+  numero         String        @unique
+  estado         EstadoFactura @default(PENDIENTE)
+  pdfUrl         String?       @map("pdf_url")
+  pngUrl         String?       @map("png_url")
+  sentWhatsappAt DateTime?     @map("sent_whatsapp_at")
+  ultimoError    String?       @map("ultimo_error")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  sale Sale @relation(fields: [saleId], references: [id])
+
+  @@map("invoices")
+}
+
+model Payment {
+  id        String     @id @default(cuid())
+  saleId    String     @map("sale_id")
+  amount    Decimal    @db.Decimal(10, 2)
+  fecha     DateTime   @default(now())
+  metodo    MetodoPago
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  sale Sale @relation(fields: [saleId], references: [id])
+
+  @@map("payments")
+}
+
+model ClientDebt {
+  id          String      @id @default(cuid())
+  clientId    String      @map("client_id")
+  saleId      String?     @map("sale_id")
+  amountTotal Decimal     @map("amount_total") @db.Decimal(10, 2)
+  amountPaid  Decimal     @default(0) @map("amount_paid") @db.Decimal(10, 2)
+  dueDate     DateTime?   @map("due_date")
+  status      EstadoDeuda @default(PENDIENTE)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  client Client @relation(fields: [clientId], references: [id])
+
+  @@map("client_debts")
+  @@index([clientId])
+  @@index([status])
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  fecha       DateTime @default(now())
+  categoria   String
+  descripcion String
+  monto       Decimal  @db.Decimal(10, 2)
+  userId      String   @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("expenses")
+  @@index([fecha])
+}
+
+// Pedido pendiente de entregar al cliente.
+//
+// Solo existe mientras la pieza no ha llegado a manos del cliente: al
+// marcarlo ENTREGADO se borra la fila, y la factura de la venta queda como
+// el registro permanente (por eso `onDelete: Cascade` hacia Sale — si se
+// borra la venta, el pedido se va con ella).
+model Order {
+  id           String       @id @default(cuid())
+  saleId       String       @unique @map("sale_id")
+  estado       EstadoPedido @default(PENDIENTE)
+  // Fecha en la que se le prometio la entrega al cliente. Es lo que ordena
+  // el listado y lo que el Dashboard usa para marcar atrasos.
+  fechaEntrega DateTime?    @map("fecha_entrega")
+  notas        String?
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@map("orders")
+  @@index([estado])
+  @@index([fechaEntrega])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  entity    String
+  entityId  String   @map("entity_id")
+  action    String
+  userId    String?  @map("user_id")
+  changes   Json?
+  timestamp DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+  @@index([entity, entityId])
+}
+
+// Perfil unico del negocio (fila singleton) usado en el modulo de Configuracion.
+model BusinessProfile {
+  id           String   @id @default(cuid())
+  nombre       String   @default("Cafe Shopping")
+  logoUrl      String?  @map("logo_url")
+  direccion    String?
+  identifFiscal String? @map("identif_fiscal")
+  tasaImpuesto Decimal  @default(0.18) @map("tasa_impuesto") @db.Decimal(5, 4)
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("business_profile")
+}

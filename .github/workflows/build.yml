@@ -1,0 +1,76 @@
+name: Build and Release
+
+# Genera el instalador de Windows y lo sube a un release de GitHub al empujar
+# un tag "v*" (ej. v2.0.23). electron-updater usa ese release + latest.yml para
+# ofrecer la actualizacion automatica a las PCs que ya tienen la app.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # ---- Backend ----
+      - name: Instalar dependencias del backend
+        run: npm ci
+        working-directory: backend
+
+      - name: Generar Prisma Client
+        run: npx prisma generate
+        working-directory: backend
+
+      - name: Compilar backend (bundle para el instalador)
+        run: npm run build:desktop
+        working-directory: backend
+
+      # ---- Frontend ----
+      - name: Instalar dependencias del frontend
+        run: npm ci
+        working-directory: frontend
+
+      - name: Compilar frontend
+        # El puerto tiene que coincidir con BACKEND_PORT de desktop/nativo.js.
+        run: npm run build
+        working-directory: frontend
+        env:
+          VITE_API_URL: http://localhost:3010/api
+
+      # ---- Instalador ----
+      - name: Instalar dependencias del empaquetador
+        run: npm ci
+        working-directory: desktop
+
+      # La version del instalador (y la que compara electron-updater) sale del
+      # tag: "v2.0.23" -> 2.0.23. Asi no hace falta acordarse de subir el
+      # numero en desktop/package.json antes de taggear.
+      - name: Fijar version desde el tag
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+        working-directory: desktop
+
+      - name: Generar instalador
+        run: npm run dist
+        working-directory: desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Subir al release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            desktop/dist/Cafe Shopping Setup *.exe
+            desktop/dist/latest.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

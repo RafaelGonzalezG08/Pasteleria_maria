@@ -1,0 +1,273 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Paleta como variables CSS (tripletes R G B para poder usar opacidad de
+ * Tailwind: bg-copper-500/20, etc.). El tema claro vive en :root; el oscuro
+ * solo redefine lo que cambia bajo .dark (que pone/quita useTheme.ts).
+ *
+ * El modo oscuro es un ROSA PROFUNDO, no un negro: fondo ciruela-rosado
+ * calido (#3A2B2D) con el rosa #ba7b7c de fondo en el texto secundario. La
+ * barra lateral usa un tono aparte (--c-porcelain-side) para separarse del
+ * area principal sin bordes.
+ */
+:root {
+  --c-espresso-950: 23 11 18;
+  --c-espresso-900: 34 16 26;
+  --c-espresso-800: 52 23 42;
+  --c-espresso-700: 74 36 56;
+
+  --c-porcelain-50: 255 255 255;
+  --c-porcelain-100: 243 232 235;
+  --c-porcelain-200: 234 220 224;
+  --c-porcelain-300: 224 205 211;
+  --c-porcelain-side: 229 213 218; /* barra lateral: un punto menos clara que las paginas */
+
+  --c-copper-50: 255 236 239;
+  --c-copper-100: 255 205 212;
+  --c-copper-200: 253 180 191;
+  --c-copper-300: 249 154 170;
+  --c-copper-400: 241 136 155;
+  --c-copper-500: 229 125 144;
+  --c-copper-600: 200 95 116;
+  --c-copper-700: 166 72 92;
+
+  --c-sage-100: 210 236 221;
+  --c-sage-500: 14 138 95;
+  --c-sage-600: 10 107 73;
+  --c-sage-700: 7 81 54;
+
+  --c-brick-100: 243 216 220;
+  --c-brick-500: 163 35 71;
+  --c-brick-600: 132 28 58;
+  --c-brick-700: 99 21 44;
+
+  --c-rose-100: 248 220 230;
+  --c-rose-400: 222 132 164;
+  --c-rose-500: 193 92 132;
+  --c-rose-600: 156 68 104;
+
+  --c-ink: 51 35 42;
+  --c-muted: 154 130 138;
+
+  /* Relieve neumorfico: sombra (abajo-derecha) y luz (arriba-izquierda). */
+  --neu-lo: 216 196 203;
+  --neu-hi: 255 255 255;
+
+  color-scheme: light;
+}
+
+.dark {
+  --c-porcelain-50: 255 255 255; /* "papel" real (facturas) sigue blanco */
+  /* Fondo de las paginas: ciruela-rosado bien claro (no un negro). La barra
+     lateral va varios tonos por debajo para separarse sin bordes. */
+  --c-porcelain-100: 99 80 87;
+  --c-porcelain-200: 114 93 100;
+  --c-porcelain-300: 132 110 117;
+  --c-porcelain-side: 80 63 69;
+
+  --c-copper-50: 118 88 96;
+  --c-copper-100: 130 98 107;
+  --c-copper-600: 240 168 180;
+  --c-copper-700: 244 188 198;
+
+  /* Verde "conectado / pagado" para el fondo oscuro: apagado (poco teal, no
+     choca con el ciruela) y con texto claro legible. sage-700 hay que
+     definirlo aqui SI o SI: sin esto quedaba verde-oscuro sobre verde-oscuro
+     y no se leia (chip "WhatsApp conectado", insignia "OneDrive"). */
+  --c-sage-100: 66 84 76;
+  --c-sage-500: 31 162 113;
+  --c-sage-600: 128 202 172;
+  --c-sage-700: 160 216 190;
+
+  --c-brick-100: 92 60 74;
+  --c-brick-500: 208 92 118;
+  --c-brick-600: 238 158 172;
+  --c-brick-700: 243 182 192;
+
+  --c-rose-100: 92 64 78;
+  --c-rose-600: 228 172 196;
+
+  --c-ink: 246 237 239;
+  --c-muted: 220 189 193; /* familia #ba7b7c, aclarado para el fondo mas claro */
+
+  --neu-lo: 76 60 66;
+  --neu-hi: 124 102 110;
+
+  color-scheme: dark;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply bg-porcelain-100 text-ink antialiased select-none;
+  font-feature-settings: 'tnum' on, 'lnum' on;
+}
+
+/*
+ * Sin esto, arrastrar el mouse por error (un clic que se corre un poco)
+ * seleccionaba toda la pantalla como si fuera una pagina web cualquiera -
+ * menus, botones, titulos - y se veia poco profesional para una app de
+ * escritorio. Los campos donde SI se escribe texto quedan seleccionables
+ * (su comportamiento normal), y los nombres de producto tambien, por si se
+ * quieren copiar.
+ */
+input,
+textarea,
+select {
+  @apply select-text;
+}
+
+/*
+ * Neumorfismo: los campos van "hundidos" en el fondo (sombra interior) en vez
+ * de llevar borde. Se aplica de forma global aqui para no tocar cada pantalla.
+ */
+@layer base {
+  /* :where() mantiene la especificidad en 0,0,1 (solo "input"), para que
+     cualquier regla de componente (.buscador input, etc.) la gane sin
+     pelear con !important. */
+  input:where(:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file'])),
+  textarea {
+    @apply rounded-lg bg-porcelain-100 text-ink;
+    box-shadow: inset 2px 2px 5px rgb(var(--neu-lo)), inset -2px -2px 5px rgb(var(--neu-hi));
+  }
+  /*
+   * Un input/textarea es de los pocos elementos HTML que NO respeta el ancho
+   * de su contenedor por defecto: si el panel se achica (celular, ventana
+   * angosta) y el campo tiene un ancho fijo (w-16, w-24...) o esta dentro de
+   * una fila flex, se sale por el borde en vez de encogerse. max-width:100%
+   * lo tope al ancho disponible; min-width:0 deja que un input flex-1 se
+   * encoja mas alla de su tamaño "de contenido" cuando comparte fila con
+   * otros campos. Es global para no tener que acordarse en cada pantalla.
+   */
+  input,
+  textarea {
+    max-width: 100%;
+    min-width: 0;
+  }
+  input:where(:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file'])):focus,
+  textarea:focus {
+    outline: none;
+    box-shadow: inset 2px 2px 5px rgb(var(--neu-lo)), inset -2px -2px 5px rgb(var(--neu-hi)),
+      0 0 0 2px rgb(var(--c-copper-500) / 0.5);
+  }
+}
+
+/*
+ * Reglas SIN @layer: ganan a cualquier utilidad de Tailwind sin usar
+ * !important. Varias pantallas todavia traen "border border-porcelain-300" en
+ * sus inputs; con el relieve interior de arriba eso creaba un doble marco.
+ */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+textarea {
+  border-width: 0;
+}
+/* Un input dentro de un contenedor que ya se ve como "campo" (barra de
+   busqueda, .buscador, un contenedor con sombra hundida) NO repite su propio
+   relieve: queda plano y transparente. */
+.buscador input,
+.shadow-neu-inset input,
+.shadow-neu-inset textarea,
+.neu-inset input,
+.neu-inset textarea {
+  background: transparent;
+  box-shadow: none;
+}
+.buscador input:focus,
+.shadow-neu-inset input:focus,
+.neu-inset input:focus {
+  box-shadow: none;
+}
+
+@layer components {
+  /* Superficie elevada (tarjetas, paneles). Mismo tono que el fondo. */
+  .neu {
+    @apply rounded-xl2 bg-porcelain-100 shadow-neu;
+  }
+  /* Superficie hundida (campos, resaltados internos, nav activo). */
+  .neu-inset {
+    @apply rounded-lg bg-porcelain-100 shadow-neu-inset;
+  }
+  /* Barra de busqueda: un solo campo HUNDIDO (mismo relieve que el Select
+     "Todas las categorias"). La lupa y el input van DENTRO del mismo hueco;
+     el input por si solo queda plano (ver regla ".buscador input" sin @layer)
+     para que no haya doble relieve. */
+  .buscador {
+    @apply flex items-center gap-2 rounded-lg bg-porcelain-100 px-3 py-2.5 text-sm text-muted transition-shadow;
+    box-shadow: inset 3px 3px 7px rgb(var(--neu-lo)), inset -3px -3px 7px rgb(var(--neu-hi));
+  }
+  .buscador input {
+    @apply min-w-0 flex-1 text-ink outline-none placeholder:text-muted;
+  }
+  .buscador:focus-within {
+    box-shadow: inset 2px 2px 5px rgb(var(--neu-lo)), inset -2px -2px 5px rgb(var(--neu-hi)),
+      0 0 0 2px rgb(var(--c-copper-500) / 0.4);
+  }
+  /* Boton neumorfico: relieve en reposo, se hunde al presionar. */
+  .neu-btn {
+    @apply bg-porcelain-100 text-ink shadow-neu-sm transition-all;
+  }
+  .neu-btn:active {
+    @apply shadow-neu-pressed;
+    transform: translateY(1px);
+  }
+}
+
+/* Motivo de recibo: borde perforado usado en previews de factura dentro del POS */
+.receipt-edge {
+  background-image: radial-gradient(circle at 6px 6px, rgb(var(--c-porcelain-100)) 6px, transparent 6.5px);
+  background-size: 16px 12px;
+  background-repeat: repeat-x;
+  background-position: top;
+  height: 8px;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Barra de scroll fina y del mismo tema en TODA la app -- sin esto, cualquier
+ * panel/modal con overflow-y-auto (el menu lateral, los modales con
+ * max-h-[90vh], las listas internas de duplicados/categorias) mostraba la
+ * barra gris por defecto del sistema, que desentona fuerte contra el fondo
+ * rosado/ciruela (mas todavia en modo oscuro). Al ser una regla global,
+ * cualquier contenedor scrolleable nuevo la hereda solo, sin acordarse de
+ * agregarle una clase.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--c-porcelain-300)) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-porcelain-300));
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--c-muted));
+}
+
+/* Mientras se cambia de tema (ver useTheme.ts): sin transiciones, para que el
+   cambio sea instantaneo en vez de un cross-fade de toda la pantalla. */
+.cambiando-tema * {
+  transition: none !important;
+}
+
+::selection {
+  background: rgb(var(--c-copper-200));
+}
+
+*:focus-visible {
+  outline: 2px solid rgb(var(--c-copper-600));
+  outline-offset: 2px;
+}

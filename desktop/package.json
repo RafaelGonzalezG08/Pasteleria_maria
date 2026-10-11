@@ -1,0 +1,89 @@
+{
+  "name": "cafe-shopping-desktop",
+  "version": "2.0.56",
+  "description": "Cafe Shopping - punto de venta de escritorio (sin Docker: base local y agente de WhatsApp integrados)",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.cafeshopping.desktop",
+    "productName": "Cafe Shopping",
+    "asar": true,
+    "files": [
+      "main.js",
+      "nativo.js",
+      "preload.js",
+      "splash.html",
+      "build/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend",
+        "to": "app-project/backend",
+        "filter": [
+          "dist/**/*",
+          "prisma/migrations/**/*",
+          "prisma/schema.prisma",
+          "package.json",
+          "node_modules/.prisma/**/*",
+          "node_modules/@prisma/client/**/*",
+          "node_modules/sharp/**/*",
+          "node_modules/@img/**/*",
+          "node_modules/detect-libc/**/*",
+          "node_modules/semver/**/*",
+          "node_modules/blake3-wasm/**/*",
+          "node_modules/@c4312/blake3-internal/**/*",
+          "node_modules/reflect-metadata/**/*",
+          "node_modules/class-transformer/**/*",
+          "node_modules/class-validator/**/*",
+          "node_modules/libphonenumber-js/**/*",
+          "node_modules/validator/**/*",
+          "!prisma/cliente-postgres/**",
+          "!prisma/*.db"
+        ]
+      },
+      {
+        "from": "../frontend/dist",
+        "to": "app-project/frontend/dist"
+      },
+      {
+        "from": "..",
+        "to": "app-project",
+        "filter": [
+          "send_whatsapp_agent.exe",
+          "send_whatsapp_agent.ahk"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Cafe Shopping"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "RafaelGonzalezG08",
+      "repo": "cafe-shopping"
+    }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "selfsigned": "^5.5.0"
+  },
+  "allowScripts": {
+    "electron@31.7.7": true
+  }
+}

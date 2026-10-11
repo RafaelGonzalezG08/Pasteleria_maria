@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Sin compilacion incremental para las compilaciones que generan dist/.
+    //
+    // "nest build" (y "nest start --watch") borran dist/ antes de empezar,
+    // pero TypeScript consultaba tsconfig.build.tsbuildinfo, concluia que ya
+    // habia emitido todo y no escribia nada: quedaba un dist/ VACIO y el
+    // arranque fallaba con "Cannot find module dist/main", sin ningun error
+    // de compilacion que lo explicara. Ya paso al generar el instalador y al
+    // levantar el servidor de desarrollo.
+    //
+    // La compilacion completa toma unos segundos; no vale la pena arriesgar
+    // esa clase de fallo silencioso por ahorrarlos.
+    "incremental": false
+  },
+  "exclude": ["node_modules", "test", "dist", "prisma", "**/*spec.ts"]
+}
