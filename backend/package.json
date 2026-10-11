@@ -1,7 +1,7 @@
 {
-  "name": "cafe-shopping-backend",
+  "name": "pasteleria-maria-backend",
   "version": "1.0.0",
-  "description": "API backend de Cafe Shopping - POS, facturacion y reportes",
+  "description": "API backend de Pasteleria Maria - POS, inventario, recetas, produccion y encargos",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -20,11 +20,11 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "prisma:seed": "tsc -p prisma/tsconfig.seed.json && node prisma/dist/seed.js",
+    "prisma:seed": "tsc -p prisma/tsconfig.seed.json && node -r dotenv/config prisma/dist/seed.js",
     "prisma:studio": "prisma studio"
   },
   "prisma": {
-    "seed": "tsc -p prisma/tsconfig.seed.json && node prisma/dist/seed.js"
+    "seed": "tsc -p prisma/tsconfig.seed.json && node -r dotenv/config prisma/dist/seed.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",

@@ -15,12 +15,9 @@
 const { app } = require('electron');
 const { fork } = require('child_process');
 const http = require('http');
-const https = require('https');
 const net = require('net');
-const os = require('os');
 const path = require('path');
 const fs = require('fs');
-const selfsigned = require('selfsigned');
 
 // Puertos propios, distintos a los de la version con Docker (3000/5173): asi
 // las dos pueden convivir en la misma PC mientras se prueba la migracion, sin
@@ -32,7 +29,6 @@ const MAX_WAIT_BACKEND_MS = 60000;
 
 let backendProcess = null;
 let frontendServer = null;
-let frontendServerHttps = null;
 
 // Estado del reinicio automatico del backend.
 let cerrando = false; // true cuando stopAll() esta cerrando todo a proposito
@@ -52,16 +48,16 @@ const VENTANA_REINICIOS_MS = 60000; // ...en este lapso, se deja de intentar
  *
  * OJO: no hay ningun app.setName() en este proyecto, asi que Electron usa
  * SIEMPRE el mismo nombre de carpeta (el "name" de package.json,
- * "cafe-shopping-desktop") sin importar si corres en desarrollo, un build
+ * "pasteleria-maria-desktop") sin importar si corres en desarrollo, un build
  * sin instalar (win-unpacked) o la app ya instalada de verdad. Las tres
  * apuntan al mismo lugar. Probar la app empaquetada (fuera de golpear la API
  * contra backend/dev.db, que es un archivo aparte y siempre seguro) sin
- * CAFE_SHOPPING_TEST_DATA_DIR pisa datos reales del negocio.
+ * PASTELERIA_MARIA_TEST_DATA_DIR pisa datos reales del negocio.
  */
 function dataDir() {
   // Solo se activa si ALGUIEN lo pone a mano para probar; el negocio nunca
   // tiene esta variable definida, asi que su carpeta real nunca cambia.
-  const base = process.env.CAFE_SHOPPING_TEST_DATA_DIR || app.getPath('userData');
+  const base = process.env.PASTELERIA_MARIA_TEST_DATA_DIR || app.getPath('userData');
   const dir = path.join(base, 'datos');
   fs.mkdirSync(dir, { recursive: true });
   publicarRutaParaElAgente(dir);
@@ -72,15 +68,15 @@ function dataDir() {
  * Deja escrita la ruta de datos donde el agente de WhatsApp pueda leerla.
  *
  * Hace falta porque el nombre de la carpeta cambia segun como corra la app:
- * en desarrollo es "cafe-shopping-desktop" (el `name` del package.json) y ya
- * instalada es "Cafe Shopping" (el `productName`). El agente es un script
+ * en desarrollo es "pasteleria-maria-desktop" (el `name` del package.json) y ya
+ * instalada es "Pasteleria Maria" (el `productName`). El agente es un script
  * aparte que no puede preguntarle nada a Electron, y con la ruta escrita a
  * mano habria buscado las facturas en una carpeta inexistente en la PC del
  * cliente — sin enviar nada y sin un error claro.
  */
 function publicarRutaParaElAgente(dir) {
   try {
-    const carpetaAgente = 'C:\\temp\\whatsapp_send';
+    const carpetaAgente = 'C:\\temp\\pasteleria_maria_whatsapp';
     fs.mkdirSync(carpetaAgente, { recursive: true });
     fs.writeFileSync(path.join(carpetaAgente, 'ruta-datos.txt'), dir, 'utf8');
   } catch {
@@ -114,7 +110,7 @@ function resolveOneDriveBackupDirNativo() {
   });
   if (!raiz) return null;
 
-  const destino = path.join(raiz, 'CafeShopping', 'Respaldos');
+  const destino = path.join(raiz, 'PasteleriaMaria', 'Respaldos');
   try {
     fs.mkdirSync(destino, { recursive: true });
     return destino;
@@ -126,45 +122,6 @@ function resolveOneDriveBackupDirNativo() {
 /** Raiz del proyecto empaquetado (backend/, frontend/dist, prisma/...). */
 function projectDir() {
   return app.isPackaged ? path.join(process.resourcesPath, 'app-project') : path.join(__dirname, '..');
-}
-
-// Adaptadores que NO son la red real de la casa/negocio: Hyper-V (el "Default
-// Switch" que trae Windows activado por WSL/Docker Desktop aunque el usuario
-// nunca lo haya pedido), VMs de VirtualBox/VMware, VPNs, loopback de captura.
-// Windows los suele reportar CON una IP en el mismo rango privado
-// (172.16-31.x.x o hasta 192.168.x.x) que el Wi-Fi real, y el orden en que
-// os.networkInterfaces() los entrega no es fiable -- en al menos un caso real
-// el adaptador de Hyper-V salio primero y el celular nunca pudo conectarse
-// porque esa IP no existe fuera de la PC. Se descartan por nombre antes de
-// mirar la IP.
-const NOMBRE_ADAPTADOR_VIRTUAL = /virtual|vEthernet|Hyper-V|VMware|VirtualBox|Npcap|TAP-|Tailscale|ZeroTier|WSL/i;
-
-/**
- * IP de esta PC en la red local (para usar la app desde el celular en la
- * misma WiFi). Junta todas las IPv4 no internas en un rango privado comun,
- * descarta las de adaptadores virtuales conocidos y, si quedan varias,
- * prefiere la que se vea como Wi-Fi/Ethernet real por nombre. Sin red (o sin
- * nada que calce), null: la app sigue funcionando solo en esta PC, como hasta
- * ahora.
- */
-function obtenerIpLan() {
-  const interfaces = os.networkInterfaces();
-  const candidatas = [];
-  for (const nombre of Object.keys(interfaces)) {
-    if (NOMBRE_ADAPTADOR_VIRTUAL.test(nombre)) continue;
-    for (const iface of interfaces[nombre] || []) {
-      if (
-        iface.family === 'IPv4' &&
-        !iface.internal &&
-        /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(iface.address)
-      ) {
-        candidatas.push({ nombre, address: iface.address });
-      }
-    }
-  }
-  if (candidatas.length === 0) return null;
-  const preferida = candidatas.find((c) => /wi-?fi|wlan|ethernet/i.test(c.nombre));
-  return (preferida || candidatas[0]).address;
 }
 
 function puertoAbierto(port) {
@@ -199,7 +156,7 @@ async function startBackend(onLog) {
   // de mostrar "EADDRINUSE".
   if (await puertoAbierto(BACKEND_PORT)) {
     throw new Error(
-      'Parece que Cafe Shopping ya esta abierto (o quedo a medio cerrar).\n\n' +
+      'Parece que Pasteleria Maria ya esta abierta (o quedo a medio cerrar).\n\n' +
         'Cierra la ventana que este abierta y vuelve a intentar. Si no ves ninguna, ' +
         'reinicia la computadora y abre la aplicacion de nuevo.',
     );
@@ -214,12 +171,6 @@ async function startBackend(onLog) {
   const uploads = path.join(datos, 'uploads');
   fs.mkdirSync(uploads, { recursive: true });
 
-  const ipLan = obtenerIpLan();
-  // El certificado solo hace falta si hay red -- sin el, esta PC sigue
-  // funcionando sola en HTTP como siempre. obtenerCertificadoTls ya deja los
-  // archivos en disco (tls-cert.pem/tls-key.pem dentro de "datos").
-  if (ipLan) await obtenerCertificadoTls(datos, ipLan);
-
   backendEnv = {
     ...process.env,
     // ELECTRON_RUN_AS_NODE hace que el proceso hijo se comporte como Node puro
@@ -229,7 +180,7 @@ async function startBackend(onLog) {
     NODE_ENV: 'production',
     PORT: String(BACKEND_PORT),
     // La base es un unico archivo dentro de los datos del usuario.
-    DATABASE_URL: `file:${path.join(datos, 'cafe-shopping.db').replace(/\\/g, '/')}`,
+    DATABASE_URL: `file:${path.join(datos, 'pasteleria-maria.db').replace(/\\/g, '/')}`,
     UPLOADS_DIR: uploads,
     BACKUP_DIR: path.join(datos, 'backups'),
     // Segunda carpeta de respaldos: la copia en OneDrive. El backend la lee
@@ -243,23 +194,8 @@ async function startBackend(onLog) {
     // nombre de usuario.
     BACKUP_MIRROR_DIR: resolveOneDriveBackupDirNativo() || '',
     PRISMA_MIGRATIONS_DIR: path.join(proyecto, 'backend', 'prisma', 'migrations'),
-    // Se suma la IP de la red local (si hay) para que el CORS del backend
-    // tambien acepte al celular abriendo la app por esa IP -- sin esto, la
-    // pagina cargaria pero cada llamada a la API se rechazaria por origen
-    // distinto. main.ts ya separa esta lista por comas. La PC sigue por
-    // "http://localhost" (Chrome ya lo trata como origen seguro sin HTTPS);
-    // el celular entra por HTTPS con el certificado autofirmado.
-    FRONTEND_URL: [`http://localhost:${FRONTEND_PORT}`, ipLan && `https://${ipLan}:${FRONTEND_PORT}`]
-      .filter(Boolean)
-      .join(','),
-    // Para mostrarla en Configuracion y que el dueño no tenga que correr
-    // "ipconfig" para saber que direccion abrir en el celular.
-    LAN_URL: ipLan ? `https://${ipLan}:${FRONTEND_PORT}` : '',
-    // Para que el backend sepa en que direccion escuchar el HTTPS y arme la
-    // URL de descarga del certificado (ver /tls-cert.pem en main.ts).
-    LAN_IP: ipLan || '',
-    TLS_CERT_PATH: ipLan ? path.join(datos, 'tls-cert.pem') : '',
-    TLS_KEY_PATH: ipLan ? path.join(datos, 'tls-key.pem') : '',
+    // Solo la ventana de esta misma PC: la app no se abre desde otros equipos.
+    FRONTEND_URL: `http://localhost:${FRONTEND_PORT}`,
     JWT_SECRET: obtenerJwtSecret(datos),
   };
   backendEntrada = entrada;
@@ -323,7 +259,7 @@ function lanzarBackend() {
       );
       const { dialog } = require('electron');
       dialog.showErrorBox(
-        'Cafe Shopping',
+        'Pasteleria Maria',
         'El servicio interno se esta cerrando solo una y otra vez.\n\n' +
           'Cierra la aplicacion y vuelve a abrirla. Si sigue igual, reinicia la ' +
           'computadora; si aun asi pasa, avisa para revisar el registro de errores.',
@@ -445,56 +381,6 @@ function obtenerJwtSecret(datos) {
   return secreto;
 }
 
-/**
- * Certificado autofirmado para servir por HTTPS a quien entra por la IP de la
- * red local (el celular). No hace falta para la PC: Electron sigue cargando
- * "http://localhost", que Chrome ya trata como origen seguro sin HTTPS -- por
- * eso este certificado nunca lo ve el propio Electron, solo el celular.
- *
- * Se cachea junto a los demas datos (mismo patron que obtenerJwtSecret) para
- * no generar uno nuevo en cada arranque. Se regenera si cambia la IP de la
- * red (el certificado anterior no serviria para la IP nueva) o si faltan los
- * archivos.
- */
-async function obtenerCertificadoTls(datos, ipLan) {
-  const archivoCert = path.join(datos, 'tls-cert.pem');
-  const archivoKey = path.join(datos, 'tls-key.pem');
-  const archivoMeta = path.join(datos, 'tls-meta.json');
-
-  try {
-    if (fs.existsSync(archivoCert) && fs.existsSync(archivoKey) && fs.existsSync(archivoMeta)) {
-      const meta = JSON.parse(fs.readFileSync(archivoMeta, 'utf8'));
-      if (meta.ip === (ipLan || null)) {
-        return { cert: fs.readFileSync(archivoCert, 'utf8'), key: fs.readFileSync(archivoKey, 'utf8') };
-      }
-    }
-  } catch {
-    // Cache corrupto o ilegible: se regenera abajo.
-  }
-
-  const altNames = [
-    { type: 2, value: 'localhost' },
-    { type: 7, ip: '127.0.0.1' },
-  ];
-  if (ipLan) altNames.push({ type: 7, ip: ipLan });
-
-  const pems = await selfsigned.generate([{ name: 'commonName', value: 'localhost' }], {
-    days: 3650,
-    algorithm: 'sha256',
-    extensions: [{ name: 'subjectAltName', altNames }],
-  });
-
-  try {
-    fs.writeFileSync(archivoCert, pems.cert, { mode: 0o600 });
-    fs.writeFileSync(archivoKey, pems.private, { mode: 0o600 });
-    fs.writeFileSync(archivoMeta, JSON.stringify({ ip: ipLan || null }), { mode: 0o600 });
-  } catch {
-    // Aunque no se pueda guardar, el certificado sirve para esta sesion.
-  }
-
-  return { cert: pems.cert, key: pems.private };
-}
-
 async function waitForBackend(onStatus) {
   let transcurrido = 0;
   while (transcurrido < MAX_WAIT_BACKEND_MS) {
@@ -542,19 +428,13 @@ const TIPOS = {
 };
 
 /**
- * Sirve el frontend compilado en dos direcciones a la vez:
- *  - HTTP en 127.0.0.1, solo para esta PC (lo que carga la ventana de
- *    Electron). Chrome ya trata "localhost" como origen seguro sin HTTPS,
- *    asi que Electron nunca necesita saber nada de certificados.
- *  - HTTPS en la IP de la red local (si hay), para el celular: Chrome solo
- *    ofrece "Instalar aplicacion" (sin la barra del navegador) en un origen
- *    seguro de verdad, y una IP en HTTP plano no cuenta como tal.
+ * Sirve el frontend compilado por HTTP en 127.0.0.1, solo para esta PC (lo que
+ * carga la ventana de Electron).
  *
  * Se usa un servidor HTTP diminuto en vez de cargar los archivos con file://
- * porque la app es una SPA con rutas (/pos, /pedidos, ...): con file:// esas
+ * porque la app es una SPA con rutas (/pos, /encargos, ...): con file:// esas
  * rutas no resuelven, y ademas el navegador trataria cada archivo como origen
- * distinto, rompiendo las llamadas a la API. Con http://localhost todo se
- * comporta igual que en la version con nginx.
+ * distinto, rompiendo las llamadas a la API.
  */
 async function startFrontend() {
   const raiz = path.join(projectDir(), 'frontend', 'dist');
@@ -588,9 +468,6 @@ async function startFrontend() {
     fs.createReadStream(archivo).pipe(res);
   };
 
-  const ipLan = obtenerIpLan();
-  const tls = ipLan ? await obtenerCertificadoTls(dataDir(), ipLan) : null;
-
   // Si el puerto esta ocupado se prueba el siguiente, en vez de reventar con
   // "EADDRINUSE" — un error tecnico que al usuario no le dice nada. La
   // interfaz puede vivir en cualquier puerto porque la ventana carga la URL
@@ -615,16 +492,12 @@ async function startFrontend() {
 
   const intentar = async (puerto, quedan) => {
     const servidorHttp = http.createServer(manejador);
-    const servidorHttps = tls ? https.createServer({ key: tls.key, cert: tls.cert }, manejador) : null;
     try {
       await escuchar(servidorHttp, puerto, '127.0.0.1');
-      if (servidorHttps) await escuchar(servidorHttps, puerto, ipLan);
       frontendServer = servidorHttp;
-      frontendServerHttps = servidorHttps;
       return `http://localhost:${puerto}`;
     } catch (error) {
       servidorHttp.close();
-      if (servidorHttps) servidorHttps.close();
       if (error.code === 'EADDRINUSE' && quedan > 0) return intentar(puerto + 1, quedan - 1);
       throw error;
     }
@@ -646,10 +519,6 @@ function stopAll() {
   if (frontendServer) {
     frontendServer.close();
     frontendServer = null;
-  }
-  if (frontendServerHttps) {
-    frontendServerHttps.close();
-    frontendServerHttps = null;
   }
 }
 

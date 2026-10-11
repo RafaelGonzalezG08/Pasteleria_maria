@@ -2,6 +2,8 @@
 node_modules/
 dist/
 build/
+# ...menos el icono de la app de escritorio, que el instalador necesita.
+!desktop/build/
 *.tsbuildinfo
 
 # Variables de entorno y credenciales
@@ -27,8 +29,6 @@ backend/backups/
 # Archivos de registros y temporales
 *.log
 desktop/dist/
-# Vista previa local del catalogo (se regenera con scripts/preview-catalogo.js)
-backend/.preview-catalogo/
 # Base de datos local de la version nativa (SQLite) y su copia de restauracion
 backend/prisma/*.db
 backend/prisma/*.db-journal
@@ -42,10 +42,8 @@ backend/test/*.db-journal
 # suelto dentro de src/.
 backend/src/**/*.js
 
-# Cliente de Prisma generado solo para leer Postgres durante la migracion
-backend/prisma/cliente-postgres/
 
-# El .exe del agente de WhatsApp SI se versiona (lo necesita el instalador, ver
-# desktop/package.json > extraResources). El .bak que deja el compilador de
-# AutoHotkey, no.
+# El .exe del agente de WhatsApp se compila desde el .ahk (GitHub Actions o
+# desktop/compilar.js); no se versiona. Tampoco el .bak que deja el compilador.
+send_whatsapp_agent.exe
 send_whatsapp_agent.exe.bak

@@ -123,7 +123,7 @@ function resolveOneDriveBackupDir() {
   });
   if (!raiz) return null;
 
-  const destino = path.join(raiz, 'CafeShopping', 'Respaldos');
+  const destino = path.join(raiz, 'PasteleriaMaria', 'Respaldos');
   try {
     fs.mkdirSync(destino, { recursive: true });
     return destino;
@@ -198,7 +198,7 @@ function launchWhatsappAgent() {
     shell.openPath(ahkPath);
   } else {
     dialog.showErrorBox(
-      'Cafe Shopping',
+      'Pastelería María',
       'No se encontro send_whatsapp_agent.exe/.ahk. El envio por WhatsApp no va a funcionar hasta que lo agregues junto al proyecto.',
     );
   }
@@ -218,7 +218,7 @@ async function createMainWindow(url) {
     show: false,
     autoHideMenuBar: true,
     icon: path.join(__dirname, 'build', 'icon.png'),
-    title: 'Cafe Shopping',
+    title: 'Pastelería María',
     webPreferences: { contextIsolation: true },
   });
 
@@ -244,7 +244,7 @@ async function createMainWindow(url) {
   mainWindow.webContents.on('did-fail-load', (_e, code, descripcion, urlFallida) => {
     console.error(`No se pudo cargar la interfaz (${code} ${descripcion}): ${urlFallida}`);
     dialog.showErrorBox(
-      'Cafe Shopping',
+      'Pastelería María',
       `No se pudo cargar la interfaz desde:\n${urlFallida}\n\n${descripcion}\n\n` +
         'Cierra la aplicacion y vuelve a abrirla. Si sigue igual, avisa para revisarlo.',
     );
@@ -383,7 +383,7 @@ async function checkForUpdates() {
         .showMessageBox(parentWin, {
           type: 'info',
           title: 'Actualización disponible',
-          message: `Cafe Shopping ${info.version} está disponible.`,
+          message: `Pastelería María ${info.version} está disponible.`,
           detail: 'La actualización se instalará la próxima vez que reinicies la aplicación.',
           buttons: ['Instalar ahora y reiniciar', 'Instalar después'],
           defaultId: 0,
@@ -468,7 +468,7 @@ async function startup() {
     setSplashStatus('Iniciando el agente de WhatsApp...');
     launchWhatsappAgent();
 
-    setSplashStatus('Abriendo Cafe Shopping...');
+    setSplashStatus('Abriendo Pastelería María...');
     await createMainWindow(urlInterfaz);
 
     // Copia de seguridad fuera de la PC. Va despues de abrir la ventana y sin
@@ -507,7 +507,7 @@ async function startup() {
     }
   } catch (error) {
     if (splashWindow && !splashWindow.isDestroyed()) splashWindow.destroy();
-    dialog.showErrorBox('Cafe Shopping', String(error.message || error));
+    dialog.showErrorBox('Pastelería María', String(error.message || error));
     app.quit();
   }
 }

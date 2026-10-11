@@ -1,20 +1,22 @@
 {
-  "name": "cafe-shopping-desktop",
-  "version": "2.0.56",
-  "description": "Cafe Shopping - punto de venta de escritorio (sin Docker: base local y agente de WhatsApp integrados)",
+  "name": "pasteleria-maria-desktop",
+  "version": "1.0.0",
+  "description": "Pastelería María - punto de venta, inventario, recetas, producción y encargos (base local y agente de WhatsApp integrados)",
   "main": "main.js",
   "private": true,
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "instalador": "node compilar.js"
   },
   "devDependencies": {
     "electron": "^31.7.7",
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.cafeshopping.desktop",
-    "productName": "Cafe Shopping",
+    "appId": "com.pasteleriamaria.desktop",
+    "productName": "Pasteleria Maria",
+    "artifactName": "Pasteleria-Maria-Setup-${version}.${ext}",
     "asar": true,
     "files": [
       "main.js",
@@ -46,7 +48,6 @@
           "node_modules/class-validator/**/*",
           "node_modules/libphonenumber-js/**/*",
           "node_modules/validator/**/*",
-          "!prisma/cliente-postgres/**",
           "!prisma/*.db"
         ]
       },
@@ -64,24 +65,24 @@
       }
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/icon.png"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Cafe Shopping"
+      "shortcutName": "Pastelería María"
     },
     "publish": {
       "provider": "github",
       "owner": "RafaelGonzalezG08",
-      "repo": "cafe-shopping"
+      "repo": "Pasteleria_maria"
     }
   },
   "dependencies": {
-    "electron-updater": "^6.8.9",
-    "selfsigned": "^5.5.0"
+    "electron-updater": "^6.8.9"
   },
   "allowScripts": {
     "electron@31.7.7": true

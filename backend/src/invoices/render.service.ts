@@ -75,7 +75,7 @@ export class RenderService {
   private sinRenderizador(): never {
     throw new Error(
       'La generacion de facturas requiere la app de escritorio: es la que aporta el navegador ' +
-        'que dibuja el ticket. Arranca Cafe Shopping en vez de ejecutar el backend suelto.',
+        'que dibuja el ticket. Abre Pastelería María (la app de escritorio) en vez de ejecutar el backend suelto.',
     );
   }
 

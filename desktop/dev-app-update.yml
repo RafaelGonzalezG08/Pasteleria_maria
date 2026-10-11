@@ -1,0 +1,4 @@
+provider: github
+owner: RafaelGonzalezG08
+repo: Pasteleria_maria
+updaterCacheDirName: pasteleria-maria-desktop-updater

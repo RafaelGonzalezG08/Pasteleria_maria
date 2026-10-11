@@ -25,9 +25,9 @@
 ;     su nombre) en vez de escribir "C:\Users\<alguien>\..." a mano.
 ;   - La carpeta de datos de la app, leyendo APPDATA (Windows la define
 ;     para cualquier usuario, sea cual sea su nombre).
-; Por eso el mismo archivo sirve para instalarlo en cualquier PC sin editar
-; nada a mano (ver instalar.ps1/instalar.bat, que ademas lo copia a la
-; carpeta de Inicio de Windows).
+; Por eso el mismo archivo sirve para cualquier PC sin editar nada a mano.
+; La app de escritorio lo arranca sola al abrirse y lo cierra al salir (ver
+; launchWhatsappAgent en desktop/main.js).
 
 #NoEnv
 #SingleInstance Force
@@ -41,7 +41,9 @@ SetTitleMatchMode, 2
 FileEncoding, UTF-8
 
 ; ===== CONFIGURACION =====
-LOCAL_DIR         := "C:\temp\whatsapp_send"
+; Carpeta propia de esta app (no la comparte con otros programas que usen un
+; agente parecido en la misma PC).
+LOCAL_DIR         := "C:\temp\pasteleria_maria_whatsapp"
 POLL_INTERVAL_MS  := 3000   ; cada cuanto revisa la cola
 ; x4 (era 15000): en una PC mas lenta, el comando de PowerShell que copia la
 ; imagen al portapapeles puede tardar bastante mas sin que nada este fallando.
@@ -52,14 +54,14 @@ LOG_FILE          := LOCAL_DIR "\agent.log"
 ; (ver dataDir() en desktop/nativo.js). Ya no hay volumenes de Docker: la
 ; cola, las facturas y los resultados son carpetas normales de Windows.
 ; La carpeta de datos cambia de nombre segun como corra la app: instalada es
-; "Cafe Shopping" (productName) y en desarrollo "cafe-shopping-desktop"
+; "Pasteleria Maria" (productName) y en desarrollo "pasteleria-maria-desktop"
 ; (name del package.json). Por eso NO se escribe a mano: la app deja la ruta
 ; real en ruta-datos.txt al arrancar (ver publicarRutaParaElAgente en
 ; desktop/nativo.js). Si ese archivo no existe todavia -por ejemplo si el
 ; agente arranco antes que la app- se prueban los nombres conocidos.
 EnvGet, appData, APPDATA
 DATA_DIR := ""
-rutaPublicada := "C:\temp\whatsapp_send\ruta-datos.txt"
+rutaPublicada := LOCAL_DIR "\ruta-datos.txt"
 if FileExist(rutaPublicada) {
     FileRead, rutaLeida, %rutaPublicada%
     rutaLeida := RegExReplace(rutaLeida, "^\s+|\s+$", "")
@@ -67,7 +69,7 @@ if FileExist(rutaPublicada) {
         DATA_DIR := rutaLeida
 }
 if (DATA_DIR = "") {
-    for i, candidato in ["Cafe Shopping", "cafe-shopping-desktop"] {
+    for i, candidato in ["Pasteleria Maria", "pasteleria-maria-desktop"] {
         prueba := appData "\" candidato "\datos"
         if FileExist(prueba) {
             DATA_DIR := prueba
@@ -76,7 +78,7 @@ if (DATA_DIR = "") {
     }
 }
 if (DATA_DIR = "")
-    DATA_DIR := appData "\Cafe Shopping\datos"
+    DATA_DIR := appData "\Pasteleria Maria\datos"
 
 UPLOADS_DIR := DATA_DIR "\uploads"
 QUEUE_DIR   := UPLOADS_DIR "\whatsapp-queue"
@@ -96,12 +98,12 @@ if !FileExist(WHATSAPP_EXE_PATH)
 FileCreateDir, %QUEUE_DIR%
 FileCreateDir, %RESULTS_DIR%
 if !FileExist(UPLOADS_DIR)
-    LogLine("AVISO: no existe " UPLOADS_DIR ". Abre Cafe Shopping al menos una vez para que se cree.")
+    LogLine("AVISO: no existe " UPLOADS_DIR ". Abre Pasteleria Maria al menos una vez para que se cree.")
 
 LogLine("=== Agente de WhatsApp iniciado. Vigilando " QUEUE_DIR " cada " POLL_INTERVAL_MS "ms ===")
 
 ; Icono de bandeja para saber que esta corriendo (click derecho > Exit para salir)
-Menu, Tray, Tip, Agente WhatsApp Cafe Shopping (activo)
+Menu, Tray, Tip, Agente WhatsApp Pasteleria Maria (activo)
 
 Loop
 {

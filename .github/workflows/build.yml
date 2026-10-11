@@ -1,13 +1,17 @@
 name: Build and Release
 
-# Genera el instalador de Windows y lo sube a un release de GitHub al empujar
-# un tag "v*" (ej. v2.0.23). electron-updater usa ese release + latest.yml para
-# ofrecer la actualizacion automatica a las PCs que ya tienen la app.
+# Genera el instalador de Windows y lo sube a un release de GitHub de ESTE
+# repositorio (RafaelGonzalezG08/Pasteleria_maria) al empujar un tag "v*"
+# (ej. v1.0.1). electron-updater usa ese release + latest.yml para ofrecer la
+# actualizacion automatica a las PCs que ya tienen la app.
 
 on:
   push:
     tags:
       - 'v*'
+
+permissions:
+  contents: write # crear el release y subirle los archivos
 
 jobs:
   build:
@@ -45,13 +49,28 @@ jobs:
         env:
           VITE_API_URL: http://localhost:3010/api
 
+      # ---- Agente de WhatsApp (.ahk -> .exe) ----
+      # Se compila aqui para que la PC del negocio no necesite AutoHotkey.
+      - name: Compilar el agente de WhatsApp
+        shell: pwsh
+        run: |
+          $zip = "$env:RUNNER_TEMP\ahk.zip"
+          $dir = "$env:RUNNER_TEMP\ahk"
+          Invoke-WebRequest -Uri "https://www.autohotkey.com/download/1.1/AutoHotkey_1.1.37.02.zip" -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $dir -Force
+          $compilador = Get-ChildItem -Path $dir -Recurse -Filter "Ahk2Exe.exe" | Select-Object -First 1
+          $bin = Get-ChildItem -Path $dir -Recurse -Filter "Unicode 64-bit.bin" | Select-Object -First 1
+          if (-not $compilador -or -not $bin) { throw "No se encontro el compilador de AutoHotkey en el zip." }
+          & $compilador.FullName /in "send_whatsapp_agent.ahk" /out "send_whatsapp_agent.exe" /bin $bin.FullName | Out-Default
+          if (-not (Test-Path "send_whatsapp_agent.exe")) { throw "No se genero send_whatsapp_agent.exe" }
+
       # ---- Instalador ----
       - name: Instalar dependencias del empaquetador
         run: npm ci
         working-directory: desktop
 
       # La version del instalador (y la que compara electron-updater) sale del
-      # tag: "v2.0.23" -> 2.0.23. Asi no hace falta acordarse de subir el
+      # tag: "v1.0.1" -> 1.0.1. Asi no hace falta acordarse de subir el
       # numero en desktop/package.json antes de taggear.
       - name: Fijar version desde el tag
         shell: bash
@@ -61,16 +80,17 @@ jobs:
         working-directory: desktop
 
       - name: Generar instalador
-        run: npm run dist
+        # --publish never: el release lo crea el paso siguiente (un solo lugar
+        # que sube archivos, sin carreras entre los dos).
+        run: npx electron-builder --publish never
         working-directory: desktop
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Subir al release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            desktop/dist/Cafe Shopping Setup *.exe
+            desktop/dist/Pasteleria-Maria-Setup-*.exe
+            desktop/dist/Pasteleria-Maria-Setup-*.exe.blockmap
             desktop/dist/latest.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
