@@ -6,7 +6,6 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { SetupDto } from './dto/setup.dto';
 import { AuditService } from '../audit/audit.service';
-import { EMAIL_USUARIO_VENTAS_WEB } from '../prisma/bootstrap.service';
 import { Role } from '../common/enums';
 
 const SALT_ROUNDS = 10;
@@ -20,8 +19,7 @@ export class AuthService {
   ) {}
 
   /**
-   * true solo en una instalacion que todavia no tiene ningun usuario real
-   * (sin contar al usuario de sistema de ventas web). Decide si el frontend
+   * true solo en una instalacion que todavia no tiene ningun usuario. Decide si el frontend
    * muestra la pantalla de "crear administrador" en vez del login.
    *
    * Al ACTUALIZAR la app la base de datos se conserva (vive en la carpeta de
@@ -29,23 +27,19 @@ export class AuthService {
    * da false: la actualizacion nunca vuelve a pedir crear el administrador.
    */
   async necesitaConfiguracionInicial(): Promise<boolean> {
-    const usuarios = await this.prisma.user.count({
-      where: { email: { not: EMAIL_USUARIO_VENTAS_WEB } },
-    });
+    const usuarios = await this.prisma.user.count();
     return usuarios === 0;
   }
 
   /**
    * Crea el administrador del primer arranque y deja la sesion iniciada.
-   * Solo funciona mientras NO exista ningun usuario real: despues responde
+   * Solo funciona mientras NO exista ningun usuario: despues responde
    * 409, asi que no sirve para crear administradores a escondidas.
    */
   async configuracionInicial(dto: SetupDto) {
     const email = dto.email.trim();
     const user = await this.prisma.$transaction(async (tx) => {
-      const usuarios = await tx.user.count({
-        where: { email: { not: EMAIL_USUARIO_VENTAS_WEB } },
-      });
+      const usuarios = await tx.user.count();
       if (usuarios > 0) {
         throw new ConflictException('La aplicacion ya esta configurada. Inicia sesion.');
       }

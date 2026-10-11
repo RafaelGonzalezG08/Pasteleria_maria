@@ -27,7 +27,8 @@ export class AuthController {
 
   @Post('setup')
   @ApiOperation({
-    summary: 'Crear el administrador del primer arranque. Solo desde la propia PC y solo si no hay usuarios.',
+    summary:
+      'Crear el administrador del primer arranque. Solo desde la propia PC y solo si no hay usuarios.',
   })
   setup(@Body() dto: SetupDto, @Req() req: Request) {
     // Endpoint sin sesion por naturaleza (aun no hay a quien loguear): se

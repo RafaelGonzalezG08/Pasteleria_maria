@@ -2,13 +2,10 @@ import { JwtService } from '@nestjs/jwt';
 import { NextFunction, Request, Response } from 'express';
 
 /**
- * Candado de /uploads (fotos de productos y facturas).
- *
- * Antes, /uploads no llevaba autenticacion porque el backend solo escuchaba
- * en 127.0.0.1 -- nadie fuera de esta PC podia pedirlo. Ahora que tambien
- * escucha en la red (para poder usar la app desde el celular en la misma
- * WiFi), cualquiera en esa red podria adivinar un nombre de archivo
- * predecible (FAC-2026-00001.png) y ver facturas de clientes sin loguearse.
+ * Candado de /uploads (fotos de productos, facturas y fotos de referencia de
+ * encargos). Los nombres de factura son predecibles (FAC-2026-00001.png): sin
+ * esto, cualquier programa de la PC podria pedir facturas de clientes sin
+ * haber iniciado sesion.
  *
  * Se reusa el mismo JWT que ya usa el resto de la API (mismo secreto,
  * mismos 30 dias de vigencia) -- no se crea un token nuevo. Un <img src=...>

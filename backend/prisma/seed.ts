@@ -1,142 +1,233 @@
 import { PrismaClient } from '@prisma/client';
-// Los enums viven en src/common/enums.ts, pero el tsconfig del seed tiene su
-// rootDir en prisma/ y no puede importar desde src. Como en SQLite estos
-// campos son texto, basta con repetir aqui los valores que usa el seed.
-const Role = { ADMIN: 'ADMIN', CAJERO: 'CAJERO', CONTABILIDAD: 'CONTABILIDAD' } as const;
-const MetodoPago = { EFECTIVO: 'EFECTIVO', TARJETA: 'TARJETA', TRANSFERENCIA: 'TRANSFERENCIA', CREDITO: 'CREDITO', OTRO: 'OTRO' } as const;
-const EstadoFactura = { PENDIENTE: 'PENDIENTE', GENERADA: 'GENERADA', ENVIADA: 'ENVIADA', ERROR: 'ERROR' } as const;
 import * as bcrypt from 'bcryptjs';
 
+/**
+ * Datos de ejemplo SOLO para desarrollo (npm run prisma:seed). La app
+ * instalada nunca corre esto: alli el administrador lo crea el dueño en la
+ * pantalla de primer arranque y el inventario se carga a mano.
+ *
+ * Los enums viven en src/common/enums.ts, pero el tsconfig del seed tiene su
+ * rootDir en prisma/ y no puede importar desde src. Como en SQLite estos
+ * campos son texto, basta con repetir aqui los valores que usa el seed.
+ */
+const Role = { ADMIN: 'ADMIN', CAJERO: 'CAJERO', REPOSTERO: 'REPOSTERO' } as const;
+
 const prisma = new PrismaClient();
+
+/** Clave de los usuarios demo. Solo desarrollo: nunca existe en una instalacion real. */
+const CLAVE_DEMO = 'maria1234';
 
 async function main() {
   console.log('Sembrando datos de ejemplo...');
 
-  await prisma.businessProfile.upsert({
-    where: { id: 'default' },
-    update: {},
-    create: {
-      id: 'default',
-      nombre: 'Cafe Shopping',
-      direccion: 'Calle Principal #123',
-      tasaImpuesto: 0.18,
-    },
-  });
-
-  const passwordHash = await bcrypt.hash('cafe1234', 10);
-
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@cafeshopping.com' },
-    update: {},
-    create: {
-      nombre: 'Administrador',
-      email: 'admin@cafeshopping.com',
-      passwordHash,
-      role: Role.ADMIN,
-    },
-  });
-
-  const cajero = await prisma.user.upsert({
-    where: { email: 'cajero@cafeshopping.com' },
-    update: {},
-    create: {
-      nombre: 'Cajero Demo',
-      email: 'cajero@cafeshopping.com',
-      passwordHash,
-      role: Role.CAJERO,
-    },
-  });
-
-  await prisma.user.upsert({
-    where: { email: 'contabilidad@cafeshopping.com' },
-    update: {},
-    create: {
-      nombre: 'Contabilidad Demo',
-      email: 'contabilidad@cafeshopping.com',
-      passwordHash,
-      role: Role.CONTABILIDAD,
-    },
-  });
-
-  // Usuario de sistema para atribuir las ventas hechas desde el punto de venta
-  // oculto del catalogo web. No puede iniciar sesion (hash de un valor
-  // aleatorio descartado). En produccion lo crea la migracion
-  // 20260905120100_usuario_ventas_web.
-  await prisma.user.upsert({
-    where: { email: 'ventas-web@cafeshopping.local' },
-    update: {},
-    create: {
-      id: 'usuario-ventas-web',
-      nombre: 'Ventas web',
-      email: 'ventas-web@cafeshopping.local',
-      passwordHash: await bcrypt.hash(Math.random().toString(36), 10),
-      role: Role.CAJERO,
-    },
-  });
-
-  const productos = [
-    { sku: 'AN-001', nombre: 'Anillo solitario oro 18k 0.5ct', precioUnitario: 45000, stock: 5 },
-    { sku: 'AN-002', nombre: 'Anillo argolla plata 925', precioUnitario: 3200, stock: 20 },
-    { sku: 'CO-001', nombre: 'Collar cadena oro 14k 45cm', precioUnitario: 18500, stock: 8 },
-    { sku: 'CO-002', nombre: 'Collar perlas cultivadas', precioUnitario: 9800, stock: 10 },
-    { sku: 'AR-001', nombre: 'Aretes diamante oro blanco', precioUnitario: 32000, stock: 6 },
-    { sku: 'AR-002', nombre: 'Aretes argolla plata 925', precioUnitario: 2400, stock: 25 },
-    { sku: 'PU-001', nombre: 'Pulsera tenis circonia', precioUnitario: 12500, stock: 12 },
-    { sku: 'RE-001', nombre: 'Reloj acero inoxidable clasico', precioUnitario: 15900, stock: 7 },
-  ];
-  for (const p of productos) {
-    await prisma.product.upsert({ where: { sku: p.sku }, update: {}, create: p });
+  const perfil = await prisma.businessProfile.findFirst();
+  if (!perfil) {
+    await prisma.businessProfile.create({
+      data: {
+        nombre: 'Pastelería María',
+        direccion: 'Calle Principal #123',
+        telefono: '809-555-0000',
+      },
+    });
   }
 
-  const cliente = await prisma.client.upsert({
-    where: { id: 'cliente-demo' },
-    update: {},
-    create: {
-      id: 'cliente-demo',
-      nombre: 'Juan Rodriguez',
-      telefono: '+18095551234',
-      email: 'juan@example.com',
-      direccion: 'Av. Independencia #45',
-    },
-  });
+  const passwordHash = await bcrypt.hash(CLAVE_DEMO, 10);
+  const usuarios = [
+    { nombre: 'Administrador', email: 'admin@pasteleriamaria.com', role: Role.ADMIN },
+    { nombre: 'Cajera Demo', email: 'cajero@pasteleriamaria.com', role: Role.CAJERO },
+    { nombre: 'Repostero Demo', email: 'repostero@pasteleriamaria.com', role: Role.REPOSTERO },
+  ];
+  for (const u of usuarios) {
+    await prisma.user.upsert({
+      where: { email: u.email },
+      update: {},
+      create: { ...u, passwordHash },
+    });
+  }
 
-  const existingSale = await prisma.sale.findFirst({ where: { clientId: cliente.id } });
-  if (!existingSale) {
-    const subtotal = 6400;
-    const impuestos = 1152;
-    const total = 7552;
+  const proveedor =
+    (await prisma.proveedor.findFirst({ where: { nombre: 'Distribuidora La Espiga' } })) ??
+    (await prisma.proveedor.create({
+      data: { nombre: 'Distribuidora La Espiga', contacto: 'Pedro', telefono: '809-555-0101' },
+    }));
 
-    const sale = await prisma.sale.create({
+  // [nombre, unidad, stock, minimo, costo por unidad, tipo]
+  const insumos: [string, string, number, number, number, string][] = [
+    ['Harina de trigo', 'kg', 25, 10, 45, 'INGREDIENTE'],
+    ['Azucar blanca', 'kg', 20, 8, 55, 'INGREDIENTE'],
+    ['Huevos', 'unidad', 90, 30, 8, 'INGREDIENTE'],
+    ['Mantequilla', 'kg', 6, 3, 420, 'INGREDIENTE'],
+    ['Leche entera', 'L', 10, 4, 75, 'INGREDIENTE'],
+    ['Cacao en polvo', 'kg', 2, 1, 650, 'INGREDIENTE'],
+    ['Polvo de hornear', 'g', 500, 200, 0.6, 'INGREDIENTE'],
+    ['Vainilla', 'ml', 500, 100, 1.2, 'INGREDIENTE'],
+    ['Dulce de leche', 'kg', 3, 1, 380, 'INGREDIENTE'],
+    ['Caja para pastel 10"', 'unidad', 20, 10, 60, 'MATERIAL'],
+    ['Base de carton 10"', 'unidad', 25, 10, 25, 'MATERIAL'],
+  ];
+  const porNombre = new Map<string, string>();
+  for (const [nombre, unidad, stock, minimo, costo, tipo] of insumos) {
+    const existente = await prisma.insumo.findUnique({ where: { nombre } });
+    if (existente) {
+      porNombre.set(nombre, existente.id);
+      continue;
+    }
+    const insumo = await prisma.insumo.create({
       data: {
-        subtotal,
-        impuestos,
-        total,
-        metodoPago: MetodoPago.EFECTIVO,
-        userId: cajero.id,
-        clientId: cliente.id,
-        items: {
+        nombre,
+        unidad,
+        tipo,
+        stockActual: stock,
+        stockMinimo: minimo,
+        costoUnitario: costo,
+        proveedorId: proveedor.id,
+        lotes: {
+          create: { cantidadInicial: stock, cantidadRestante: stock, costoUnitario: costo },
+        },
+        movimientos: {
+          create: {
+            tipo: 'ENTRADA',
+            cantidad: stock,
+            costoUnitario: costo,
+            stockResultante: stock,
+            motivo: 'Stock inicial',
+          },
+        },
+      },
+    });
+    porNombre.set(nombre, insumo.id);
+  }
+
+  const categorias = ['Pasteles', 'Panes', 'Bizcochos', 'Postres'];
+  const categoriaId = new Map<string, string>();
+  for (const nombre of categorias) {
+    const c = await prisma.category.upsert({ where: { nombre }, update: {}, create: { nombre } });
+    categoriaId.set(nombre, c.id);
+  }
+
+  const productos = [
+    {
+      sku: 'PA-0001',
+      nombre: 'Pastel de chocolate 10"',
+      precioUnitario: 2200,
+      stock: 2,
+      categoria: 'Pasteles',
+    },
+    {
+      sku: 'BI-0001',
+      nombre: 'Bizcocho de vainilla',
+      precioUnitario: 150,
+      stock: 12,
+      categoria: 'Bizcochos',
+    },
+    { sku: 'PN-0001', nombre: 'Pan de agua', precioUnitario: 10, stock: 60, categoria: 'Panes' },
+    {
+      sku: 'PO-0001',
+      nombre: 'Flan de caramelo',
+      precioUnitario: 120,
+      stock: 8,
+      categoria: 'Postres',
+    },
+  ];
+  const productoId = new Map<string, string>();
+  for (const { categoria, ...p } of productos) {
+    const creado = await prisma.product.upsert({
+      where: { sku: p.sku },
+      update: {},
+      create: { ...p, categoriaId: categoriaId.get(categoria) },
+    });
+    productoId.set(p.nombre, creado.id);
+  }
+
+  if ((await prisma.receta.count()) === 0) {
+    const relleno = await prisma.receta.create({
+      data: {
+        nombre: 'Relleno de dulce de leche',
+        esSubreceta: true,
+        rendimiento: 500,
+        unidadRendimiento: 'g',
+        pasos: 'Batir el dulce de leche con la mantequilla hasta que quede cremoso.',
+        ingredientes: {
           create: [
-            { descripcion: 'Aretes argolla plata 925', cantidad: 1, precioUnitario: 2400, total: 2400 },
-            { descripcion: 'Anillo argolla plata 925', cantidad: 1, precioUnitario: 3200, total: 3200 },
-            { descripcion: 'Pulsera tenis circonia', cantidad: 1, precioUnitario: 800, total: 800 },
+            { insumoId: porNombre.get('Dulce de leche'), cantidad: 450, unidad: 'g', orden: 0 },
+            { insumoId: porNombre.get('Mantequilla'), cantidad: 50, unidad: 'g', orden: 1 },
           ],
         },
       },
     });
-
-    await prisma.invoice.create({
+    await prisma.receta.create({
       data: {
-        saleId: sale.id,
-        numero: `FAC-${new Date().getFullYear()}-00001`,
-        estado: EstadoFactura.PENDIENTE,
+        nombre: 'Pastel de chocolate 10"',
+        rendimiento: 1,
+        unidadRendimiento: 'unidad',
+        porciones: 16,
+        tiempoPreparacionMin: 120,
+        productoId: productoId.get('Pastel de chocolate 10"'),
+        pasos:
+          'Precalentar el horno a 180°C.\nMezclar los secos.\nAgregar huevos, mantequilla y leche.\nHornear 45 minutos.\nRellenar y decorar.',
+        ingredientes: {
+          create: [
+            { insumoId: porNombre.get('Harina de trigo'), cantidad: 500, unidad: 'g', orden: 0 },
+            { insumoId: porNombre.get('Azucar blanca'), cantidad: 400, unidad: 'g', orden: 1 },
+            { insumoId: porNombre.get('Cacao en polvo'), cantidad: 80, unidad: 'g', orden: 2 },
+            { insumoId: porNombre.get('Huevos'), cantidad: 6, unidad: 'unidad', orden: 3 },
+            { insumoId: porNombre.get('Mantequilla'), cantidad: 250, unidad: 'g', orden: 4 },
+            { insumoId: porNombre.get('Leche entera'), cantidad: 250, unidad: 'ml', orden: 5 },
+            { insumoId: porNombre.get('Polvo de hornear'), cantidad: 15, unidad: 'g', orden: 6 },
+            { subrecetaId: relleno.id, cantidad: 500, unidad: 'g', orden: 7 },
+            {
+              insumoId: porNombre.get('Caja para pastel 10"'),
+              cantidad: 1,
+              unidad: 'unidad',
+              orden: 8,
+            },
+            {
+              insumoId: porNombre.get('Base de carton 10"'),
+              cantidad: 1,
+              unidad: 'unidad',
+              orden: 9,
+            },
+          ],
+        },
+      },
+    });
+    await prisma.receta.create({
+      data: {
+        nombre: 'Bizcocho de vainilla (docena)',
+        rendimiento: 1,
+        unidadRendimiento: 'docena',
+        tiempoPreparacionMin: 40,
+        productoId: productoId.get('Bizcocho de vainilla'),
+        ingredientes: {
+          create: [
+            { insumoId: porNombre.get('Harina de trigo'), cantidad: 300, unidad: 'g', orden: 0 },
+            { insumoId: porNombre.get('Azucar blanca'), cantidad: 200, unidad: 'g', orden: 1 },
+            { insumoId: porNombre.get('Huevos'), cantidad: 4, unidad: 'unidad', orden: 2 },
+            { insumoId: porNombre.get('Mantequilla'), cantidad: 150, unidad: 'g', orden: 3 },
+            { insumoId: porNombre.get('Vainilla'), cantidad: 10, unidad: 'ml', orden: 4 },
+          ],
+        },
       },
     });
   }
 
-  console.log('Listo. Usuarios de prueba (password: "cafe1234"):');
-  console.log(`  - ${admin.email} (ADMIN)`);
-  console.log(`  - ${cajero.email} (CAJERO)`);
-  console.log('  - contabilidad@cafeshopping.com (CONTABILIDAD)');
+  if ((await prisma.client.count()) === 0) {
+    await prisma.client.createMany({
+      data: [
+        {
+          nombre: 'Ana Martinez',
+          telefono: '+18095551234',
+          direccion: 'Av. Duarte #45',
+          cumpleanos: new Date(1990, 9, 14),
+        },
+        { nombre: 'Carlos Gomez', telefono: '+18295559876' },
+      ],
+    });
+  }
+
+  console.log(
+    `Listo. Usuarios demo (clave "${CLAVE_DEMO}"): ${usuarios.map((u) => u.email).join(', ')}`,
+  );
 }
 
 main()

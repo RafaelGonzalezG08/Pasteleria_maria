@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { ESTADOS_DEUDA_CON_SALDO, MetodoPago, METODOS_PAGO } from '../common/enums';
+import {
+  ESTADOS_DEUDA_CON_SALDO,
+  ESTADOS_ENCARGO_ACTIVOS,
+  MetodoPago,
+  METODOS_PAGO,
+} from '../common/enums';
 
 // Metodos de pago que dejan el dinero en la caja al momento de la venta (todos
 // menos el credito, que se cobra despues con abonos). Se enumeran en positivo
@@ -11,7 +16,7 @@ import { localDateKey, parseFromDate, parseToDate } from '../common/date-range';
 
 export type GroupBy = 'day' | 'week' | 'month' | 'year';
 
-export type TipoTransaccion = 'VENTA' | 'ABONO' | 'GASTO';
+export type TipoTransaccion = 'VENTA' | 'ABONO' | 'ANTICIPO' | 'GASTO';
 
 export interface Transaccion {
   id: string;
@@ -23,7 +28,7 @@ export interface Transaccion {
   metodoPago: string | null;
   cliente: string | null;
   usuario: string | null;
-  /** Numero de factura (venta/abono) o categoria (gasto). */
+  /** Numero de factura (venta/abono), codigo de encargo (anticipo) o categoria (gasto). */
   referencia: string | null;
   /** Estado de la factura (solo VENTA). */
   estado: string | null;
@@ -217,7 +222,9 @@ export class ReportsService {
    * Dos maneras de mirar el mismo periodo:
    *
    *  - `saldoEnCaja`  = dinero que de verdad entro (ventas de contado + abonos
-   *    cobrados en el periodo) menos los gastos. Una venta a credito NO cuenta
+   *    cobrados + anticipos y pagos de encargos en el periodo) menos los
+   *    gastos. La venta que se crea al entregar un encargo no cuenta aqui: ese
+   *    dinero ya entro como anticipos/pagos del encargo. Una venta a credito NO cuenta
    *    hasta que el cliente paga. Es lo que el negocio tiene en la mano.
    *
    *  - `balanceTotal` = todas las ventas del periodo (contado y credito, aunque
@@ -230,19 +237,23 @@ export class ReportsService {
   async cashflow(from?: string, to?: string) {
     const { fromDate, toDate } = this.defaultRange(from, to);
     const rango = { gte: fromDate, lte: toDate };
-    const [ventas, contado, abonos, gastos] = await Promise.all([
+    const [ventas, contado, abonos, gastos, anticipos] = await Promise.all([
       this.prisma.sale.aggregate({ where: { fecha: rango }, _sum: { total: true } }),
       this.prisma.sale.aggregate({
-        where: { fecha: rango, metodoPago: { in: [...METODOS_CONTADO] } },
+        where: { fecha: rango, metodoPago: { in: [...METODOS_CONTADO] }, encargo: { is: null } },
         _sum: { total: true },
       }),
       this.prisma.payment.aggregate({ where: { fecha: rango }, _sum: { amount: true } }),
       this.prisma.expense.aggregate({ where: { fecha: rango }, _sum: { monto: true } }),
+      this.prisma.encargoPago.aggregate({ where: { fecha: rango }, _sum: { monto: true } }),
     ]);
 
     const ingresos = Number(ventas._sum.total ?? 0);
     const egresos = Number(gastos._sum.monto ?? 0);
-    const cobrado = Number(contado._sum.total ?? 0) + Number(abonos._sum.amount ?? 0);
+    const cobrado =
+      Number(contado._sum.total ?? 0) +
+      Number(abonos._sum.amount ?? 0) +
+      Number(anticipos._sum.monto ?? 0);
     return {
       ingresos: round(ingresos),
       egresos: round(egresos),
@@ -273,12 +284,14 @@ export class ReportsService {
     const { fromDate, toDate } = this.defaultRange(params.from, params.to);
     const rango = { gte: fromDate, lte: toDate };
     const tipos =
-      params.tipo && params.tipo.length > 0 ? params.tipo : (['VENTA', 'ABONO', 'GASTO'] as const);
+      params.tipo && params.tipo.length > 0
+        ? params.tipo
+        : (['VENTA', 'ABONO', 'ANTICIPO', 'GASTO'] as const);
     // Los gastos no tienen metodo de pago propio: si se filtra por metodo, no
     // pueden aparecer (en vez de mostrarlos igual, que confundiria el filtro).
     const incluirGastos = tipos.includes('GASTO') && !params.metodoPago;
 
-    const [ventas, abonos, gastos] = await Promise.all([
+    const [ventas, abonos, gastos, anticipos] = await Promise.all([
       tipos.includes('VENTA')
         ? this.prisma.sale.findMany({
             where: {
@@ -290,6 +303,7 @@ export class ReportsService {
               client: { select: { nombre: true } },
               user: { select: { nombre: true } },
               invoice: { select: { numero: true, estado: true, pngUrl: true } },
+              encargo: { select: { codigo: true } },
             },
           })
         : Promise.resolve([]),
@@ -312,6 +326,19 @@ export class ReportsService {
             include: { user: { select: { nombre: true } } },
           })
         : Promise.resolve([]),
+      tipos.includes('ANTICIPO')
+        ? this.prisma.encargoPago.findMany({
+            where: {
+              fecha: rango,
+              ...(params.metodoPago ? { metodo: params.metodoPago } : {}),
+              ...(params.userId ? { userId: params.userId } : {}),
+            },
+            include: {
+              user: { select: { nombre: true } },
+              encargo: { select: { codigo: true, client: { select: { nombre: true } } } },
+            },
+          })
+        : Promise.resolve([]),
     ]);
 
     let items: Transaccion[] = [
@@ -321,7 +348,11 @@ export class ReportsService {
         fecha: s.fecha,
         monto: round(Number(s.total)),
         signo: 'INGRESO',
-        descripcion: s.metodoPago === 'CREDITO' ? 'Venta a credito' : 'Venta de contado',
+        descripcion: s.encargo
+          ? `Entrega del encargo ${s.encargo.codigo}`
+          : s.metodoPago === 'CREDITO'
+            ? 'Venta a credito'
+            : 'Venta de contado',
         metodoPago: s.metodoPago,
         cliente: s.client?.nombre ?? null,
         usuario: s.user?.nombre ?? null,
@@ -344,6 +375,21 @@ export class ReportsService {
         estado: null,
         saleId: p.saleId,
         facturaPngUrl: p.sale?.invoice?.pngUrl ?? null,
+      })),
+      ...anticipos.map((p): Transaccion => ({
+        id: `anticipo-${p.id}`,
+        tipo: 'ANTICIPO',
+        fecha: p.fecha,
+        monto: round(Number(p.monto)),
+        signo: 'INGRESO',
+        descripcion: p.nota || 'Pago de encargo',
+        metodoPago: p.metodo,
+        cliente: p.encargo.client?.nombre ?? null,
+        usuario: p.user?.nombre ?? null,
+        referencia: p.encargo.codigo,
+        estado: null,
+        saleId: null,
+        facturaPngUrl: null,
       })),
       ...gastos.map((g): Transaccion => ({
         id: `gasto-${g.id}`,
@@ -399,30 +445,42 @@ export class ReportsService {
     const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const mes = { gte: inicioMes };
 
-    const [ventasHoy, deudas, gastosRecientes, gastosMes, ventasMes, contadoMes, abonosMes] =
-      await Promise.all([
-        this.prisma.sale.aggregate({
-          where: { fecha: { gte: startOfDay } },
-          _sum: { total: true },
-          _count: true,
-        }),
-        this.prisma.clientDebt.aggregate({
-          where: { status: { in: [...ESTADOS_DEUDA_CON_SALDO] } },
-          _sum: { amountTotal: true, amountPaid: true },
-        }),
-        this.prisma.expense.findMany({ orderBy: { fecha: 'desc' }, take: 5 }),
-        this.prisma.expense.aggregate({ where: { fecha: mes }, _sum: { monto: true } }),
-        this.prisma.sale.aggregate({ where: { fecha: mes }, _sum: { total: true } }),
-        this.prisma.sale.aggregate({
-          where: { fecha: mes, metodoPago: { in: [...METODOS_CONTADO] } },
-          _sum: { total: true },
-        }),
-        this.prisma.payment.aggregate({ where: { fecha: mes }, _sum: { amount: true } }),
-      ]);
+    const [
+      ventasHoy,
+      deudas,
+      gastosRecientes,
+      gastosMes,
+      ventasMes,
+      contadoMes,
+      abonosMes,
+      anticiposMes,
+    ] = await Promise.all([
+      this.prisma.sale.aggregate({
+        where: { fecha: { gte: startOfDay } },
+        _sum: { total: true },
+        _count: true,
+      }),
+      this.prisma.clientDebt.aggregate({
+        where: { status: { in: [...ESTADOS_DEUDA_CON_SALDO] } },
+        _sum: { amountTotal: true, amountPaid: true },
+      }),
+      this.prisma.expense.findMany({ orderBy: { fecha: 'desc' }, take: 5 }),
+      this.prisma.expense.aggregate({ where: { fecha: mes }, _sum: { monto: true } }),
+      this.prisma.sale.aggregate({ where: { fecha: mes }, _sum: { total: true } }),
+      this.prisma.sale.aggregate({
+        where: { fecha: mes, metodoPago: { in: [...METODOS_CONTADO] }, encargo: { is: null } },
+        _sum: { total: true },
+      }),
+      this.prisma.payment.aggregate({ where: { fecha: mes }, _sum: { amount: true } }),
+      this.prisma.encargoPago.aggregate({ where: { fecha: mes }, _sum: { monto: true } }),
+    ]);
 
     const deudaTotal = Number(deudas._sum.amountTotal ?? 0) - Number(deudas._sum.amountPaid ?? 0);
     const gastosDelMes = Number(gastosMes._sum.monto ?? 0);
-    const cobradoMes = Number(contadoMes._sum.total ?? 0) + Number(abonosMes._sum.amount ?? 0);
+    const cobradoMes =
+      Number(contadoMes._sum.total ?? 0) +
+      Number(abonosMes._sum.amount ?? 0) +
+      Number(anticiposMes._sum.monto ?? 0);
 
     return {
       ventasHoy: { total: round(Number(ventasHoy._sum.total ?? 0)), cantidad: ventasHoy._count },
@@ -433,6 +491,132 @@ export class ReportsService {
       saldoEnCajaMes: round(cobradoMes - gastosDelMes),
       balanceTotalMes: round(Number(ventasMes._sum.total ?? 0) - gastosDelMes),
       gastosRecientes,
+    };
+  }
+
+  /** Productos mas vendidos del periodo, por unidades (solo los del catalogo). */
+  async topProductos(from?: string, to?: string, limite = 10) {
+    const { fromDate, toDate } = this.defaultRange(from, to);
+    const items = await this.prisma.saleItem.findMany({
+      where: { productId: { not: null }, sale: { fecha: { gte: fromDate, lte: toDate } } },
+      select: {
+        productId: true,
+        descripcion: true,
+        cantidad: true,
+        total: true,
+        product: { select: { nombre: true } },
+      },
+    });
+    const porProducto = new Map<
+      string,
+      { productId: string; nombre: string; unidades: number; ingresos: number }
+    >();
+    for (const i of items) {
+      const id = i.productId as string;
+      const actual = porProducto.get(id) ?? {
+        productId: id,
+        nombre: i.product?.nombre ?? i.descripcion,
+        unidades: 0,
+        ingresos: 0,
+      };
+      actual.unidades += i.cantidad;
+      actual.ingresos += Number(i.total);
+      porProducto.set(id, actual);
+    }
+    return [...porProducto.values()]
+      .map((p) => ({ ...p, ingresos: round(p.ingresos) }))
+      .sort((a, b) => b.unidades - a.unidades)
+      .slice(0, limite);
+  }
+
+  /**
+   * Mermas del periodo: insumos botados (movimientos MERMA) y producto
+   * terminado dado de baja, con lo que costaron.
+   */
+  async mermas(from?: string, to?: string) {
+    const { fromDate, toDate } = this.defaultRange(from, to);
+    const rango = { gte: fromDate, lte: toDate };
+    const [movs, productos] = await Promise.all([
+      this.prisma.movimientoInsumo.findMany({
+        where: { tipo: 'MERMA', fecha: rango },
+        orderBy: { fecha: 'desc' },
+        include: {
+          insumo: { select: { nombre: true, unidad: true } },
+          user: { select: { nombre: true } },
+        },
+      }),
+      this.prisma.mermaProducto.findMany({
+        where: { fecha: rango },
+        orderBy: { fecha: 'desc' },
+        include: { product: { select: { nombre: true } }, user: { select: { nombre: true } } },
+      }),
+    ]);
+    const insumos = movs.map((m) => ({
+      id: m.id,
+      fecha: m.fecha,
+      nombre: m.insumo.nombre,
+      cantidad: Math.abs(Number(m.cantidad)),
+      unidad: m.insumo.unidad,
+      costo: round(Math.abs(Number(m.cantidad)) * Number(m.costoUnitario)),
+      motivo: m.motivo,
+      usuario: m.user?.nombre ?? null,
+    }));
+    const terminados = productos.map((m) => ({
+      id: m.id,
+      fecha: m.fecha,
+      nombre: m.product.nombre,
+      cantidad: m.cantidad,
+      unidad: 'unidad',
+      costo: round(m.cantidad * Number(m.costoUnitario)),
+      motivo: m.motivo,
+      usuario: m.user?.nombre ?? null,
+    }));
+    const costoInsumos = insumos.reduce((s, x) => s + x.costo, 0);
+    const costoProductos = terminados.reduce((s, x) => s + x.costo, 0);
+    return {
+      insumos,
+      productos: terminados,
+      totales: {
+        costoInsumos: round(costoInsumos),
+        costoProductos: round(costoProductos),
+        total: round(costoInsumos + costoProductos),
+      },
+    };
+  }
+
+  /** Lo que los clientes deben: saldos de encargos sin entregar y cuentas a credito. */
+  async cuentasPorCobrar() {
+    const [encargos, deudas] = await Promise.all([
+      this.prisma.encargo.findMany({
+        where: { estado: { in: [...ESTADOS_ENCARGO_ACTIVOS] } },
+        orderBy: { fechaEntrega: 'asc' },
+        include: { client: { select: { id: true, nombre: true, telefono: true } } },
+      }),
+      this.clientDebts(),
+    ]);
+    const conSaldo = encargos
+      .map((e) => ({
+        id: e.id,
+        codigo: e.codigo,
+        cliente: e.client.nombre,
+        telefono: e.client.telefono,
+        fechaEntrega: e.fechaEntrega,
+        estado: e.estado,
+        total: Number(e.total),
+        abonado: Number(e.abonado),
+        saldo: round(Number(e.total) - Number(e.abonado)),
+      }))
+      .filter((e) => e.saldo > 0.004);
+    const saldoEncargos = conSaldo.reduce((s, e) => s + e.saldo, 0);
+    const saldoCreditos = deudas.reduce((s, d) => s + d.saldo, 0);
+    return {
+      encargos: conSaldo,
+      creditos: deudas,
+      totales: {
+        encargos: round(saldoEncargos),
+        creditos: round(saldoCreditos),
+        total: round(saldoEncargos + saldoCreditos),
+      },
     };
   }
 

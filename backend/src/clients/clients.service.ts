@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { ESTADOS_DEUDA_CON_SALDO } from '../common/enums';
+import { parseFromDate } from '../common/date-range';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 
@@ -21,6 +22,7 @@ export class ClientsService {
       Email: c.email ?? '',
       Direccion: c.direccion ?? '',
       Notas: c.notas ?? '',
+      Cumpleanos: c.cumpleanos ? c.cumpleanos.toISOString().slice(5, 10) : '',
       'Cliente desde': c.createdAt.toISOString().slice(0, 10),
     }));
   }
@@ -56,7 +58,7 @@ export class ClientsService {
     });
 
     return clients.map((client) => ({
-      ...client,
+      ...this.conFechas(client),
       deudaPendiente: client.debts.reduce(
         (sum, debt) => sum + Number(debt.amountTotal) - Number(debt.amountPaid),
         0,
@@ -77,23 +79,129 @@ export class ClientsService {
           take: 20,
           include: { invoice: true },
         },
+        encargos: {
+          orderBy: { fechaEntrega: 'desc' },
+          take: 30,
+          select: {
+            id: true,
+            codigo: true,
+            fechaEntrega: true,
+            estado: true,
+            total: true,
+            abonado: true,
+            items: { select: { descripcion: true, cantidad: true } },
+          },
+        },
       },
     });
     if (!client) throw new NotFoundException('Cliente no encontrado.');
-    return client;
+    return {
+      ...this.conFechas(client),
+      encargos: client.encargos.map((e) => ({
+        ...e,
+        total: Number(e.total),
+        abonado: Number(e.abonado),
+        saldo: Math.max(0, Number(e.total) - Number(e.abonado)),
+      })),
+    };
+  }
+
+  /**
+   * Clientes que cumplen años (o tienen una fecha especial) dentro de los
+   * proximos `dias` dias, para felicitarlos u ofrecerles su pastel a tiempo.
+   * Se compara solo dia y mes.
+   */
+  async proximasFechas(dias?: number) {
+    const profile = await this.prisma.businessProfile.findFirst();
+    const rango = dias ?? profile?.diasAlertaCumpleanos ?? 7;
+    const clientes = await this.prisma.client.findMany({
+      where: { OR: [{ cumpleanos: { not: null } }, { fechasEspeciales: { not: null } }] },
+      select: { id: true, nombre: true, telefono: true, cumpleanos: true, fechasEspeciales: true },
+    });
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const faltan = (fecha: Date): number => {
+      const proxima = new Date(hoy.getFullYear(), fecha.getMonth(), fecha.getDate());
+      if (proxima < hoy) proxima.setFullYear(hoy.getFullYear() + 1);
+      return Math.round((proxima.getTime() - hoy.getTime()) / 86400000);
+    };
+
+    const resultado: {
+      clientId: string;
+      nombre: string;
+      telefono: string;
+      descripcion: string;
+      fecha: Date;
+      enDias: number;
+    }[] = [];
+    for (const c of clientes) {
+      const fechas: { descripcion: string; fecha: Date }[] = [];
+      if (c.cumpleanos) fechas.push({ descripcion: 'Cumpleaños', fecha: c.cumpleanos });
+      for (const f of this.leerFechasEspeciales(c.fechasEspeciales)) {
+        fechas.push({ descripcion: f.descripcion, fecha: parseFromDate(f.fecha) });
+      }
+      for (const f of fechas) {
+        const enDias = faltan(f.fecha);
+        if (enDias <= rango) {
+          resultado.push({ clientId: c.id, nombre: c.nombre, telefono: c.telefono, ...f, enDias });
+        }
+      }
+    }
+    return resultado.sort((a, b) => a.enDias - b.enDias);
   }
 
   async create(dto: CreateClientDto, userId?: string) {
-    const client = await this.prisma.client.create({ data: dto });
+    const client = await this.prisma.client.create({
+      data: { ...this.datos(dto), nombre: dto.nombre, telefono: dto.telefono },
+    });
     await this.audit.log('Client', client.id, 'CREATE', userId, dto as any);
     return client;
   }
 
   async update(id: string, dto: UpdateClientDto, userId?: string) {
     await this.ensureExists(id);
-    const client = await this.prisma.client.update({ where: { id }, data: dto });
+    const client = await this.prisma.client.update({ where: { id }, data: this.datos(dto) });
     await this.audit.log('Client', id, 'UPDATE', userId, dto as any);
     return client;
+  }
+
+  /** Pasa cumpleaños a fecha y las fechas especiales a texto JSON (SQLite no tiene Json). */
+  private datos(dto: UpdateClientDto) {
+    const { cumpleanos, fechasEspeciales, ...resto } = dto;
+    return {
+      ...resto,
+      ...(cumpleanos !== undefined
+        ? { cumpleanos: cumpleanos ? parseFromDate(cumpleanos.slice(0, 10)) : null }
+        : {}),
+      ...(fechasEspeciales !== undefined
+        ? {
+            fechasEspeciales:
+              fechasEspeciales.length > 0
+                ? JSON.stringify(
+                    fechasEspeciales.map((f) => ({
+                      descripcion: f.descripcion.trim(),
+                      fecha: f.fecha.slice(0, 10),
+                    })),
+                  )
+                : null,
+          }
+        : {}),
+    };
+  }
+
+  private leerFechasEspeciales(raw: string | null): { descripcion: string; fecha: string }[] {
+    if (!raw) return [];
+    try {
+      const v = JSON.parse(raw);
+      return Array.isArray(v) ? v.filter((f) => f && f.descripcion && f.fecha) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private conFechas<T extends { fechasEspeciales: string | null }>(c: T) {
+    return { ...c, fechasEspeciales: this.leerFechasEspeciales(c.fechasEspeciales) };
   }
 
   /**
@@ -108,14 +216,15 @@ export class ClientsService {
   async remove(id: string, userId?: string) {
     await this.ensureExists(id);
 
-    const [ventas, deudas] = await Promise.all([
+    const [ventas, deudas, encargos] = await Promise.all([
       this.prisma.sale.count({ where: { clientId: id } }),
       this.prisma.clientDebt.count({ where: { clientId: id } }),
+      this.prisma.encargo.count({ where: { clientId: id } }),
     ]);
 
-    if (ventas > 0 || deudas > 0) {
+    if (ventas > 0 || deudas > 0 || encargos > 0) {
       throw new BadRequestException(
-        `No se puede borrar este cliente porque ya tiene historial (${ventas} venta(s) y ${deudas} deuda(s)). ` +
+        `No se puede borrar este cliente porque ya tiene historial (${ventas} venta(s), ${deudas} deuda(s) y ${encargos} encargo(s)). ` +
           `Borrarlo eliminaria el rastro de facturas ya emitidas a su nombre.`,
       );
     }
@@ -138,16 +247,17 @@ export class ClientsService {
       const cliente = await this.prisma.client.findUnique({ where: { id } });
       if (!cliente) continue;
 
-      const [ventas, deudas] = await Promise.all([
+      const [ventas, deudas, encargos] = await Promise.all([
         this.prisma.sale.count({ where: { clientId: id } }),
         this.prisma.clientDebt.count({ where: { clientId: id } }),
+        this.prisma.encargo.count({ where: { clientId: id } }),
       ]);
 
-      if (ventas > 0 || deudas > 0) {
+      if (ventas > 0 || deudas > 0 || encargos > 0) {
         omitidos.push({
           id,
           nombre: cliente.nombre,
-          motivo: `tiene ${ventas} venta(s) y ${deudas} deuda(s)`,
+          motivo: `tiene ${ventas} venta(s), ${deudas} deuda(s) y ${encargos} encargo(s)`,
         });
         continue;
       }

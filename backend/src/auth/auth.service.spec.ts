@@ -31,14 +31,14 @@ describe('AuthService', () => {
   it('deberia rechazar credenciales de un usuario inexistente', async () => {
     prisma.user.findUnique.mockResolvedValue(null);
     await expect(
-      service.login({ email: 'nadie@cafeshopping.com', password: '123456' }),
+      service.login({ email: 'nadie@pasteleriamaria.com', password: '123456' }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('deberia rechazar una contraseña incorrecta', async () => {
     prisma.user.findUnique.mockResolvedValue({
       id: '1',
-      email: 'admin@cafeshopping.com',
+      email: 'admin@pasteleriamaria.com',
       passwordHash: await bcrypt.hash('correcta', 10),
       role: 'ADMIN',
       nombre: 'Admin',
@@ -46,14 +46,14 @@ describe('AuthService', () => {
     });
 
     await expect(
-      service.login({ email: 'admin@cafeshopping.com', password: 'incorrecta' }),
+      service.login({ email: 'admin@pasteleriamaria.com', password: 'incorrecta' }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('deberia devolver un token cuando las credenciales son correctas', async () => {
     prisma.user.findUnique.mockResolvedValue({
       id: '1',
-      email: 'admin@cafeshopping.com',
+      email: 'admin@pasteleriamaria.com',
       passwordHash: await bcrypt.hash('correcta', 10),
       role: 'ADMIN',
       nombre: 'Admin',
@@ -61,11 +61,11 @@ describe('AuthService', () => {
     });
 
     const result = await service.login({
-      email: 'admin@cafeshopping.com',
+      email: 'admin@pasteleriamaria.com',
       password: 'correcta',
     });
 
     expect(result.accessToken).toBe('fake-jwt-token');
-    expect(result.user.email).toBe('admin@cafeshopping.com');
+    expect(result.user.email).toBe('admin@pasteleriamaria.com');
   });
 });

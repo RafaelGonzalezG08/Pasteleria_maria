@@ -206,7 +206,7 @@ export class ClientDebtsService {
    * como referencia informativa (para mostrar "ultimo recordatorio: hace
    * X"), pero no bloquea el envio.
    */
-  async sendReminder(debtId: string, userId: string | undefined, esPc: boolean) {
+  async sendReminder(debtId: string, userId: string | undefined) {
     const debt = await this.prisma.clientDebt.findUnique({
       where: { id: debtId },
       include: { client: true },
@@ -227,7 +227,7 @@ export class ClientDebtsService {
 
     const saldo = Math.max(0, Number(debt.amountTotal) - Number(debt.amountPaid));
 
-    const resultado = await this.invoicesService.sendDebtReminder(debt.saleId, saldo, userId, esPc);
+    await this.invoicesService.sendDebtReminder(debt.saleId, saldo, userId);
 
     await this.prisma.client.update({
       where: { id: debt.clientId },
@@ -238,12 +238,6 @@ export class ClientDebtsService {
       accion: 'recordatorio-whatsapp',
       debtId,
     });
-
-    // Modo directo: el frontend necesita el mensaje/imagen/telefono devueltos
-    // por sendDebtReminder para mandarlo el mismo desde el celular -- no la
-    // deuda actualizada, que es lo que se devuelve cuando si se encolo para
-    // el agente de la PC.
-    if ('modo' in resultado && resultado.modo === 'directo') return resultado;
 
     return this.prisma.clientDebt.findUnique({ where: { id: debtId }, include: { client: true } });
   }

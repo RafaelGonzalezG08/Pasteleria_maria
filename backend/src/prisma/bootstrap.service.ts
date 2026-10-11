@@ -2,21 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 
 /**
- * Usuario de sistema (no inicia sesion) al que se atribuyen las ventas del
- * catalogo web. Lo inserta la migracion 20260905120100_usuario_ventas_web en
- * TODA base, incluida una recien creada -- por eso no cuenta como "ya hay
- * usuarios" al decidir si la instalacion necesita crear su administrador
- * (ver AuthService.necesitaConfiguracionInicial).
- */
-export const EMAIL_USUARIO_VENTAS_WEB = 'ventas-web@cafeshopping.local';
-
-/**
  * Deja la base utilizable la primera vez que se abre la aplicacion.
  *
  * NO crea ningun usuario: el administrador lo crea el dueño en la pantalla
- * de primer arranque (AuthService.configuracionInicial). Antes se sembraba un
- * admin con una clave publica, y en una instalacion nueva ese usuario "demo"
- * ni siquiera existia o no coincidia con el que el cliente recordaba.
+ * de primer arranque (AuthService.configuracionInicial), y despues el puede
+ * agregar mas usuarios desde Configuracion.
  *
  * Es seguro que corra en cada arranque (tambien al actualizar): solo crea el
  * perfil del negocio si falta y nunca toca usuarios ni datos existentes.

@@ -11,12 +11,12 @@ import { Role } from '../common/enums';
 @ApiBearerAuth()
 @Controller('reports')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN, Role.CONTABILIDAD)
+@Roles(Role.ADMIN)
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Get('dashboard')
-  @Roles(Role.ADMIN, Role.CONTABILIDAD, Role.CAJERO)
+  @Roles(Role.ADMIN, Role.CAJERO, Role.REPOSTERO)
   dashboard() {
     return this.reportsService.dashboardSummary();
   }
@@ -48,6 +48,21 @@ export class ReportsController {
   @Roles(Role.ADMIN)
   productMargins(@Query('from') from?: string, @Query('to') to?: string) {
     return this.reportsService.productMargins(from, to);
+  }
+
+  @Get('top-productos')
+  topProductos(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.reportsService.topProductos(from, to);
+  }
+
+  @Get('mermas')
+  mermas(@Query('from') from?: string, @Query('to') to?: string) {
+    return this.reportsService.mermas(from, to);
+  }
+
+  @Get('cuentas-por-cobrar')
+  cuentasPorCobrar() {
+    return this.reportsService.cuentasPorCobrar();
   }
 
   @Get('clients/debts')
@@ -122,7 +137,7 @@ export class ReportsController {
 
 function parseTipos(tipo?: string): TipoTransaccion[] | undefined {
   if (!tipo) return undefined;
-  const validos: TipoTransaccion[] = ['VENTA', 'ABONO', 'GASTO'];
+  const validos: TipoTransaccion[] = ['VENTA', 'ABONO', 'ANTICIPO', 'GASTO'];
   const pedidos = tipo
     .split(',')
     .map((t) => t.trim().toUpperCase())

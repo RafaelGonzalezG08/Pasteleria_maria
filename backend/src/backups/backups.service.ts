@@ -18,7 +18,9 @@ export interface BackupContenido {
   facturas: number;
   deudas: number;
   gastos: number;
-  pedidos: number;
+  encargos: number;
+  insumos: number;
+  recetas: number;
   usuarios: number;
 }
 
@@ -35,7 +37,7 @@ const execAsync = promisify(exec);
 const pipeline = promisify(pipelineCb);
 
 /**
- * Ruta real del archivo .db a partir de DATABASE_URL ("file:./cafe.db").
+ * Ruta real del archivo .db a partir de DATABASE_URL ("file:./pasteleria.db").
  * Se necesita para restaurar, porque restaurar en SQLite es literalmente
  * reemplazar ese archivo.
  */
@@ -57,22 +59,15 @@ const MARKER_FILE = join(BACKUP_DIR, '.last-backup.json');
 
 /**
  * Respalda la base de datos (pg_dump) y la carpeta de uploads cada
- * `BACKUP_INTERVAL_DAYS` dias (3 por defecto), guardandolos SIEMPRE en
- * /app/backups, en disco local — nunca en S3/R2, a proposito: el bucket de
- * R2 esta configurado con lectura publica (para que WhatsApp vea las
- * facturas), y un respaldo completo de la base de datos ahi expondria datos
- * sensibles de clientes (telefonos, montos, contraseñas hasheadas).
- *
- * Ese directorio /app/backups se monta como volumen desde docker-compose.yml
- * a una carpeta del host (ver BACKUP_HOST_DIR en docker-compose.yml) - si
- * quieres una copia fuera de tu propia PC, la forma recomendada es apuntar
- * BACKUP_HOST_DIR a una carpeta dentro de tu OneDrive/Google Drive/Dropbox
- * *privados*: el propio cliente de sincronizacion de Windows la sube solo,
- * sin necesitar credenciales ni integraciones adicionales, y sigue siendo
- * una carpeta privada tuya (no un bucket con lectura publica).
+ * `BACKUP_INTERVAL_DAYS` dias (3 por defecto), guardandolos SIEMPRE en disco
+ * local (BACKUP_DIR, en la carpeta de datos del usuario) y nunca en un bucket
+ * en la nube: un respaldo completo expondria datos sensibles de clientes
+ * (telefonos, montos, contraseñas hasheadas). La app de escritorio ademas
+ * copia cada respaldo a la carpeta privada de OneDrive del usuario, si existe
+ * (ver BACKUP_MIRROR_DIR en common/paths.ts).
  *
  * Se usa un archivo marcador (en vez de un setInterval en memoria) para que
- * la periodicidad de "cada 3 dias" sobreviva a reinicios del contenedor.
+ * la periodicidad de "cada 3 dias" sobreviva a reinicios de la app.
  */
 @Injectable()
 export class BackupsService {
@@ -189,17 +184,29 @@ export class BackupsService {
    */
   private async escribirFicha(rutaRespaldo: string): Promise<void> {
     try {
-      const [productos, clientes, ventas, facturas, deudas, gastos, pedidos, usuarios] =
-        await Promise.all([
-          this.prisma.product.count(),
-          this.prisma.client.count(),
-          this.prisma.sale.count(),
-          this.prisma.invoice.count(),
-          this.prisma.clientDebt.count(),
-          this.prisma.expense.count(),
-          this.prisma.order.count(),
-          this.prisma.user.count(),
-        ]);
+      const [
+        productos,
+        clientes,
+        ventas,
+        facturas,
+        deudas,
+        gastos,
+        encargos,
+        insumos,
+        recetas,
+        usuarios,
+      ] = await Promise.all([
+        this.prisma.product.count(),
+        this.prisma.client.count(),
+        this.prisma.sale.count(),
+        this.prisma.invoice.count(),
+        this.prisma.clientDebt.count(),
+        this.prisma.expense.count(),
+        this.prisma.encargo.count(),
+        this.prisma.insumo.count(),
+        this.prisma.receta.count(),
+        this.prisma.user.count(),
+      ]);
       await fs.writeFile(
         `${rutaRespaldo}.info.json`,
         JSON.stringify({
@@ -209,7 +216,9 @@ export class BackupsService {
           facturas,
           deudas,
           gastos,
-          pedidos,
+          encargos,
+          insumos,
+          recetas,
           usuarios,
         }),
       );

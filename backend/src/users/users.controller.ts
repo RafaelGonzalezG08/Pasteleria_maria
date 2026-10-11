@@ -1,6 +1,14 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { Role } from '../common/enums';
+import { Role, ROLES } from '../common/enums';
 import { UsersService } from './users.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -27,7 +35,7 @@ export class UsersController {
    * solo puede tocar la propia porque el usuario sale del token.
    */
   @Patch('me/password')
-  @Roles(Role.ADMIN, Role.CAJERO, Role.CONTABILIDAD)
+  @Roles(Role.ADMIN, Role.CAJERO, Role.REPOSTERO)
   changePassword(@Body() dto: ChangePasswordDto, @CurrentUser() user: AuthenticatedUser) {
     return this.usersService.changePassword(user.userId, dto);
   }
@@ -39,5 +47,17 @@ export class UsersController {
     @CurrentUser() currentUser: AuthenticatedUser,
   ) {
     return this.usersService.setActive(id, activo, currentUser.userId);
+  }
+
+  @Patch(':id/role')
+  setRole(
+    @Param('id') id: string,
+    @Body('role') role: Role,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    if (!ROLES.includes(role)) {
+      throw new BadRequestException('Rol invalido. Usa ADMIN, CAJERO o REPOSTERO.');
+    }
+    return this.usersService.setRole(id, role, currentUser.userId);
   }
 }

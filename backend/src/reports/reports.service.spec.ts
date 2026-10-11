@@ -10,6 +10,7 @@ function crearService(datos: {
   contadoTotal: number;
   abonosTotal: number;
   gastosTotal: number;
+  anticiposTotal?: number;
 }) {
   const prisma = {
     sale: {
@@ -26,6 +27,9 @@ function crearService(datos: {
     },
     expense: {
       aggregate: jest.fn().mockResolvedValue({ _sum: { monto: datos.gastosTotal } }),
+    },
+    encargoPago: {
+      aggregate: jest.fn().mockResolvedValue({ _sum: { monto: datos.anticiposTotal ?? null } }),
     },
   };
   return new ReportsService(prisma as any);
@@ -49,6 +53,19 @@ describe('ReportsService.cashflow', () => {
     expect(r.cobrado).toBe(7500); // 6000 + 1500
     expect(r.saldoEnCaja).toBe(5500); // 7500 - 2000
     expect(r.neto).toBe(r.balanceTotal); // compatibilidad
+  });
+
+  it('los anticipos de encargos cuentan como dinero cobrado', async () => {
+    const svc = crearService({
+      ventasTotal: 0,
+      contadoTotal: 0,
+      abonosTotal: 0,
+      gastosTotal: 100,
+      anticiposTotal: 700,
+    });
+    const r = await svc.cashflow();
+    expect(r.cobrado).toBe(700);
+    expect(r.saldoEnCaja).toBe(600);
   });
 
   it('sin ventas ni gastos todo queda en cero (no NaN)', async () => {
@@ -123,6 +140,7 @@ describe('ReportsService.transactions', () => {
       sale: { findMany: jest.fn().mockResolvedValue([venta1, venta2]) },
       payment: { findMany: jest.fn().mockResolvedValue([abono1]) },
       expense: { findMany: jest.fn().mockResolvedValue([gasto1]) },
+      encargoPago: { findMany: jest.fn().mockResolvedValue([]) },
     };
     return { svc: new ReportsService(prisma as any), prisma };
   }

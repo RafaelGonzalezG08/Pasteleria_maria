@@ -10,16 +10,18 @@ import { ClientDebtsModule } from './client-debts/client-debts.module';
 import { ProductsModule } from './products/products.module';
 import { CategoriesModule } from './categories/categories.module';
 import { SalesModule } from './sales/sales.module';
-import { OrdersModule } from './orders/orders.module';
-import { WebOrdersModule } from './web-orders/web-orders.module';
-import { CatalogoModule } from './catalogo/catalogo.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { ReportsModule } from './reports/reports.module';
 import { SettingsModule } from './settings/settings.module';
 import { BackupsModule } from './backups/backups.module';
-import { DataImportModule } from './data-import/data-import.module';
 import { HealthModule } from './health/health.module';
+import { InsumosModule } from './insumos/insumos.module';
+import { RecetasModule } from './recetas/recetas.module';
+import { ProduccionModule } from './produccion/produccion.module';
+import { ProveedoresModule } from './proveedores/proveedores.module';
+import { ComprasModule } from './compras/compras.module';
+import { EncargosModule } from './encargos/encargos.module';
 
 @Module({
   imports: [
@@ -34,16 +36,18 @@ import { HealthModule } from './health/health.module';
     ProductsModule,
     CategoriesModule,
     SalesModule,
-    OrdersModule,
-    WebOrdersModule,
-    CatalogoModule,
     InvoicesModule,
     ExpensesModule,
     ReportsModule,
     SettingsModule,
     BackupsModule,
-    DataImportModule,
     HealthModule,
+    InsumosModule,
+    RecetasModule,
+    ProduccionModule,
+    ProveedoresModule,
+    ComprasModule,
+    EncargosModule,
   ],
 })
 export class AppModule {}

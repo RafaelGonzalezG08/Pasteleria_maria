@@ -11,8 +11,8 @@ import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { InvoicesService } from '../invoices/invoices.service';
-import { CatalogoService } from '../catalogo/catalogo.service';
 import { parseFromDate, parseToDate } from '../common/date-range';
+import { redondearDinero } from '../common/unidades';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { DeleteSaleDto } from './dto/delete-sale.dto';
@@ -37,25 +37,7 @@ export class SalesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly invoicesService: InvoicesService,
-    private readonly catalogo: CatalogoService,
   ) {}
-
-  /**
-   * Toda venta que descuenta o devuelve stock de un producto del catalogo
-   * puede sacar o volver a meter una pieza del sitio publico (que solo
-   * muestra piezas con existencia). Nunca tumba la venta si falla: es el
-   * mismo motivo que en ProductsService.
-   */
-  private async regenerarCatalogo(): Promise<void> {
-    try {
-      const resultado = await this.catalogo.generar();
-      if (!resultado.ok) {
-        this.logger.warn(`No se pudo actualizar el catalogo web: ${resultado.error}`);
-      }
-    } catch (error) {
-      this.logger.warn(`No se pudo actualizar el catalogo web: ${error}`);
-    }
-  }
 
   /**
    * Calcula subtotal/impuestos/total. Expuesto tambien para pruebas unitarias.
@@ -117,7 +99,6 @@ export class SalesService {
           metodoPago: dto.metodoPago,
           userId,
           clientId: dto.clientId,
-          webCodigo: dto.webCodigo,
           items: {
             create: dto.items.map((item) => ({
               productId: item.productId,
@@ -162,18 +143,6 @@ export class SalesService {
         },
       });
 
-      // Pedido por entregar: queda en el registro de Pedidos hasta que se
-      // marque como entregado (ahi se borra y la factura pasa a ser el
-      // registro de la venta). Ver orders.service.ts.
-      if (dto.esPedido) {
-        await tx.order.create({
-          data: {
-            saleId: created.id,
-            fechaEntrega: dto.fechaEntrega ? parseFromDate(dto.fechaEntrega) : null,
-          },
-        });
-      }
-
       return created;
     });
 
@@ -181,7 +150,6 @@ export class SalesService {
       total: totals.total,
       metodoPago: dto.metodoPago,
     });
-    void this.regenerarCatalogo();
 
     if (dto.generarFactura !== false) {
       try {
@@ -226,6 +194,7 @@ export class SalesService {
       include: { items: true },
     });
     if (!existing) throw new NotFoundException('Venta no encontrada.');
+    await this.rechazarSiVieneDeEncargo(id);
     const existingDebt = await this.prisma.clientDebt.findFirst({ where: { saleId: id } });
 
     // Cliente de la factura. Si el dto no trae `clientId` se deja el actual
@@ -330,7 +299,6 @@ export class SalesService {
       totalNuevo: totals.total,
       ...(cambiaCliente ? { clienteAnterior: existing.clientId, clienteNuevo: nuevoClientId } : {}),
     });
-    void this.regenerarCatalogo();
 
     // Vuelve a generar el PNG/PDF de la factura para que refleje la correccion.
     try {
@@ -370,6 +338,7 @@ export class SalesService {
       include: { items: true, invoice: true },
     });
     if (!sale) throw new NotFoundException('Venta no encontrada.');
+    await this.rechazarSiVieneDeEncargo(id);
 
     const debt = await this.prisma.clientDebt.findFirst({ where: { saleId: id } });
     if (debt && Number(debt.amountPaid) > 0) {
@@ -405,7 +374,6 @@ export class SalesService {
         .filter((i) => i.productId)
         .map((i) => ({ productId: i.productId, cantidad: i.cantidad })),
     });
-    void this.regenerarCatalogo();
 
     return { id, deleted: true, numeroFactura: sale.invoice?.numero ?? null };
   }
@@ -444,10 +412,121 @@ export class SalesService {
         items: true,
         invoice: true,
         payments: true,
+        encargo: { select: { id: true, codigo: true } },
       },
     });
     if (!sale) throw new NotFoundException('Venta no encontrada.');
     return sale;
+  }
+
+  /**
+   * Crea la venta (con su factura) de un encargo que se esta entregando,
+   * dentro de la transaccion del encargo. Los totales vienen ya calculados
+   * del encargo (se cobro lo que se le dijo al cliente, aunque despues haya
+   * cambiado el ITBIS). Si queda saldo, se crea una cuenta por cobrar solo
+   * por ese saldo: lo que el cliente ya pago quedo en los anticipos.
+   *
+   * El stock se descuenta "hasta donde haya": un pastel personalizado puede
+   * entregarse sin haberse registrado como produccion, y eso no debe impedir
+   * entregarle el pastel al cliente que lo esta esperando.
+   */
+  async crearVentaDeEncargo(
+    tx: Prisma.TransactionClient,
+    datos: {
+      userId: string;
+      clientId: string;
+      metodoPago: MetodoPago;
+      items: {
+        productId?: string;
+        descripcion: string;
+        cantidad: number;
+        precioUnitario: number;
+      }[];
+      subtotal: number;
+      impuestos: number;
+      total: number;
+      saldoACredito: number;
+      fechaVencimiento?: Date;
+    },
+  ) {
+    // Todo por `tx`: SQLite admite un solo escritor, y una consulta por fuera
+    // de la transaccion quedaria esperando a que esta termine (se trancaba).
+    const costByProductId = await this.getCostByProductId(datos.items, tx);
+    const venta = await tx.sale.create({
+      data: {
+        fecha: new Date(),
+        subtotal: datos.subtotal,
+        impuestos: datos.impuestos,
+        total: datos.total,
+        metodoPago: datos.metodoPago,
+        userId: datos.userId,
+        clientId: datos.clientId,
+        items: {
+          create: datos.items.map((item) => ({
+            productId: item.productId,
+            descripcion: item.descripcion,
+            cantidad: item.cantidad,
+            precioUnitario: item.precioUnitario,
+            costoUnitario: item.productId ? (costByProductId.get(item.productId) ?? 0) : 0,
+            total: redondearDinero(item.cantidad * item.precioUnitario),
+          })),
+        },
+      },
+    });
+
+    for (const item of datos.items) {
+      if (!item.productId) continue;
+      const producto = await tx.product.findUnique({
+        where: { id: item.productId },
+        select: { stock: true },
+      });
+      const descontar = Math.min(producto?.stock ?? 0, item.cantidad);
+      if (descontar > 0) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: descontar } },
+        });
+      }
+    }
+
+    if (datos.saldoACredito > 0) {
+      await tx.clientDebt.create({
+        data: {
+          clientId: datos.clientId,
+          saleId: venta.id,
+          amountTotal: datos.saldoACredito,
+          dueDate: datos.fechaVencimiento,
+        },
+      });
+    }
+
+    await tx.invoice.create({
+      data: {
+        saleId: venta.id,
+        numero: await this.generateInvoiceNumber(tx),
+        estado: EstadoFactura.PENDIENTE,
+      },
+    });
+    // La auditoria la registra EncargosService al terminar la transaccion.
+    return venta;
+  }
+
+  /**
+   * Las ventas que salen de un encargo no se corrigen ni se borran desde
+   * Ventas: sus totales y su saldo dependen de los anticipos del encargo, y
+   * cambiarlas por aqui los descuadraria.
+   */
+  private async rechazarSiVieneDeEncargo(saleId: string) {
+    const encargo = await this.prisma.encargo.findFirst({
+      where: { saleId },
+      select: { codigo: true },
+    });
+    if (encargo) {
+      throw new BadRequestException(
+        `Esta venta es la entrega del encargo ${encargo.codigo}. Sus montos dependen de los anticipos del ` +
+          'encargo, por eso no se corrige ni se elimina desde Ventas.',
+      );
+    }
   }
 
   /**
@@ -530,12 +609,15 @@ export class SalesService {
   }
 
   /** Trae el costo actual del catalogo para los items que vienen de un producto (ignora items manuales). */
-  private async getCostByProductId(items: { productId?: string }[]): Promise<Map<string, number>> {
+  private async getCostByProductId(
+    items: { productId?: string }[],
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<Map<string, number>> {
     const productIds = [
       ...new Set(items.map((i) => i.productId).filter((id): id is string => Boolean(id))),
     ];
     if (productIds.length === 0) return new Map();
-    const products = await this.prisma.product.findMany({
+    const products = await db.product.findMany({
       where: { id: { in: productIds } },
       select: { id: true, costoUnitario: true },
     });

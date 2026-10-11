@@ -1,6 +1,27 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsEmail,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
+
+/** Aniversario, cumpleaños de un hijo... cualquier fecha que convenga recordar. */
+export class FechaEspecialDto {
+  @ApiProperty({ example: 'Aniversario de bodas' })
+  @IsString()
+  @MinLength(2, { message: 'Describe la fecha especial.' })
+  descripcion: string;
+
+  @ApiProperty({ example: '2026-05-14' })
+  @IsISO8601({}, { message: 'Una de las fechas especiales no es valida.' })
+  fecha: string;
+}
 
 export class CreateClientDto {
   @ApiProperty({ example: 'Juan Rodriguez' })
@@ -35,4 +56,22 @@ export class CreateClientDto {
   @IsOptional()
   @IsString()
   notas?: string;
+
+  @ApiProperty({
+    required: false,
+    example: '1990-03-21',
+    description: 'Cumpleaños (el año es opcional: usa 2000 si no se sabe).',
+  })
+  @Transform(({ value }) => (typeof value === 'string' && value.trim() === '' ? null : value))
+  @IsOptional()
+  @IsISO8601({}, { message: 'La fecha de cumpleaños no es valida.' })
+  cumpleanos?: string | null;
+
+  @ApiProperty({ required: false, type: [FechaEspecialDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => FechaEspecialDto)
+  fechasEspeciales?: FechaEspecialDto[];
 }

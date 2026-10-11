@@ -8,7 +8,20 @@ interface BusinessInfo {
   nombre: string;
   logoUrl?: string | null;
   direccion?: string | null;
+  telefono?: string | null;
   identifFiscal?: string | null;
+  moneda?: string | null;
+  nombreImpuesto?: string | null;
+}
+
+/**
+ * Anticipos de un encargo (si la venta salio de uno). Se muestran como los
+ * abonos de una venta a credito: el cliente pago antes de llevarse el pastel.
+ */
+export interface AnticipoFactura {
+  fecha: Date;
+  monto: Prisma.Decimal | number;
+  metodo: string;
 }
 
 const money = (value: Prisma.Decimal | number) =>
@@ -53,8 +66,7 @@ const METODO_LABEL: Record<string, string> = {
  * un telefono (evita franjas negras arriba/abajo por ser demasiado ancha).
  *
  * Paleta: la MISMA del programa (rosa cuarzo / oro rosa / vino), definida en
- * frontend/tailwind.config.js. Antes la factura usaba un dorado de cafeteria
- * que no se parecia a nada de lo que el cliente ve en la app.
+ * frontend/tailwind.config.js, para que se parezca a lo que el cliente ve en la app.
  *
  * Jerarquia visual segun el estado de la cuenta:
  *  - Venta al contado o a credito SIN abonos: el "Total" es lo mas grande.
@@ -67,7 +79,9 @@ export function renderInvoiceHtml(
   sale: SaleWithRelations,
   numero: string,
   business: BusinessInfo,
+  encargo?: { codigo: string; anticipos: AnticipoFactura[] } | null,
 ): string {
+  const moneda = business.moneda || 'RD$';
   const itemsRows = sale.items
     .map(
       (item) => `
@@ -100,13 +114,21 @@ export function renderInvoiceHtml(
     ? `<div class="totals-row"><span>Descuento (${descuentoPctTexto}%)</span><span>-${money(descuentoMonto)}</span></div>`
     : '';
   const impuestosRow = hayImpuestos
-    ? `<div class="totals-row"><span>Impuestos</span><span>${money(impuestosMonto)}</span></div>`
+    ? `<div class="totals-row"><span>${escapeHtml(business.nombreImpuesto || 'Impuestos')}</span><span>${money(impuestosMonto)}</span></div>`
     : '';
 
-  const totalPagado = sale.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+  const pagos = [
+    ...(encargo?.anticipos ?? []).map((a) => ({
+      fecha: a.fecha,
+      metodo: a.metodo,
+      amount: a.monto,
+    })),
+    ...sale.payments,
+  ];
+  const totalPagado = pagos.reduce((sum, p) => sum + Number(p.amount), 0);
   const saldoPendiente = Math.max(0, Number(sale.total) - totalPagado);
   const esCredito = sale.metodoPago === 'CREDITO';
-  const hayAbonos = sale.payments.length > 0;
+  const hayAbonos = pagos.length > 0;
   const mostrarPagos = esCredito || hayAbonos;
   const cuentaSaldada = saldoPendiente <= 0.01;
   // El "Total" se achica solo cuando ya hay abonos: ahi el numero que manda
@@ -114,7 +136,7 @@ export function renderInvoiceHtml(
   // sigue siendo el protagonista.
   const totalDemovido = hayAbonos;
 
-  const abonosRows = sale.payments
+  const abonosRows = pagos
     .map(
       (p) => `
         <li class="abono">
@@ -129,7 +151,7 @@ export function renderInvoiceHtml(
     ? `<div class="saldo-hero saldo-hero--ok">&#10003;&nbsp; Cuenta saldada</div>`
     : `<div class="saldo-hero saldo-hero--due">
         <span class="saldo-hero-label">Saldo pendiente</span>
-        <span class="saldo-hero-amount">RD$ ${money(saldoPendiente)}</span>
+        <span class="saldo-hero-amount">${escapeHtml(moneda)} ${money(saldoPendiente)}</span>
       </div>`;
 
   // Bloque de abonos. Con al menos un abono se muestra la lista + un resumen
@@ -138,7 +160,7 @@ export function renderInvoiceHtml(
   const pagosSection = mostrarPagos
     ? `
     <div class="abonos-block">
-      <div class="section-title">Abonos</div>
+      <div class="section-title">${encargo ? 'Anticipos y abonos' : 'Abonos'}</div>
       ${
         hayAbonos
           ? `<ul class="abono-list">${abonosRows}</ul>
@@ -257,12 +279,14 @@ export function renderInvoiceHtml(
       <div class="brand">
         <div class="brand-name">${escapeHtml(business.nombre)}</div>
         ${business.direccion ? `<div class="brand-meta">${escapeHtml(business.direccion)}</div>` : ''}
-        ${business.identifFiscal ? `<div class="brand-meta">RNC/ID Fiscal: ${escapeHtml(business.identifFiscal)}</div>` : ''}
+        ${business.telefono ? `<div class="brand-meta">Tel. ${escapeHtml(business.telefono)}</div>` : ''}
+        ${business.identifFiscal ? `<div class="brand-meta">RNC: ${escapeHtml(business.identifFiscal)}</div>` : ''}
       </div>
       <div class="invoice-meta">
         <div class="invoice-number">${escapeHtml(numero)}</div>
         <div>${fecha(sale.fecha)}</div>
         <div class="metodo-pago">${escapeHtml(METODO_LABEL[sale.metodoPago] ?? sale.metodoPago)}</div>
+        ${encargo ? `<div>Encargo ${escapeHtml(encargo.codigo)}</div>` : ''}
       </div>
     </div>
 

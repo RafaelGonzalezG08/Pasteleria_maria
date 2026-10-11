@@ -8,7 +8,7 @@ export class RegisterDto {
   @MinLength(2)
   nombre: string;
 
-  @ApiProperty({ example: 'cajero@cafeshopping.com' })
+  @ApiProperty({ example: 'cajero@pasteleriamaria.com' })
   @IsEmail({}, { message: 'Debes ingresar un correo valido.' })
   email: string;
 
@@ -19,6 +19,6 @@ export class RegisterDto {
 
   @ApiProperty({ enum: Role, default: Role.CAJERO, required: false })
   @IsOptional()
-  @IsEnum(Role, { message: 'Rol invalido. Usa ADMIN, CAJERO o CONTABILIDAD.' })
+  @IsEnum(Role, { message: 'Rol invalido. Usa ADMIN, CAJERO o REPOSTERO.' })
   role?: Role;
 }

@@ -21,6 +21,8 @@ export class CategoriesController {
   }
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
   create(@Body() dto: CreateCategoryDto, @CurrentUser() user: AuthenticatedUser) {
     return this.categories.create(dto.nombre, user.userId);
   }

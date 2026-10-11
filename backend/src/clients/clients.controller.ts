@@ -44,6 +44,12 @@ export class ClientsController {
     res.send(xlsx);
   }
 
+  /** Cumpleaños y fechas especiales de los proximos dias (Dashboard). */
+  @Get('proximas-fechas')
+  proximasFechas(@Query('dias') dias?: string) {
+    return this.clientsService.proximasFechas(dias ? Number(dias) : undefined);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.clientsService.findOne(id);

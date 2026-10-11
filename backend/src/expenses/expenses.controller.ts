@@ -23,14 +23,14 @@ export class ExpensesController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN, Role.CONTABILIDAD)
+  @Roles(Role.ADMIN)
   create(@Body() dto: CreateExpenseDto, @CurrentUser() user: AuthenticatedUser) {
     return this.expensesService.create(dto, user.userId);
   }
 
   @Delete(':id')
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN, Role.CONTABILIDAD)
+  @Roles(Role.ADMIN)
   remove(
     @Param('id') id: string,
     @Body() dto: DeleteExpenseDto,

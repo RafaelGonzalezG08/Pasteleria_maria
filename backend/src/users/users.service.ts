@@ -94,4 +94,33 @@ export class UsersService {
     await this.audit.log('User', id, 'UPDATE', currentUserId, { activo });
     return updated;
   }
+
+  /**
+   * Cambia el rol de un usuario. Mismos frenos que desactivar: el admin no
+   * se quita su propio rol, y siempre queda al menos un administrador activo.
+   */
+  async setRole(id: string, role: Role, currentUserId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('Usuario no encontrado.');
+
+    if (user.role === Role.ADMIN && role !== Role.ADMIN) {
+      if (id === currentUserId) {
+        throw new BadRequestException('No puedes quitarte a ti mismo el rol de administrador.');
+      }
+      const otrosAdminsActivos = await this.prisma.user.count({
+        where: { role: Role.ADMIN, activo: true, id: { not: id } },
+      });
+      if (otrosAdminsActivos === 0) {
+        throw new BadRequestException('Tiene que quedar al menos un administrador activo.');
+      }
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { role },
+      select: { id: true, nombre: true, email: true, role: true, activo: true },
+    });
+    await this.audit.log('User', id, 'UPDATE', currentUserId, { role });
+    return updated;
+  }
 }

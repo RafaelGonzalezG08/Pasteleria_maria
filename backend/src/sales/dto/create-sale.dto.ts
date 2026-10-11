@@ -22,7 +22,7 @@ export class SaleItemDto {
   @IsString()
   productId?: string;
 
-  @ApiProperty({ example: 'Cafe con leche 12oz' })
+  @ApiProperty({ example: 'Pan de agua' })
   @IsString()
   descripcion: string;
 
@@ -91,27 +91,4 @@ export class CreateSaleDto {
   })
   @IsOptional()
   generarFactura?: boolean;
-
-  @ApiProperty({
-    required: false,
-    description:
-      'Marca la venta como pedido por entregar (queda en el registro de Pedidos hasta que se entregue).',
-  })
-  @IsOptional()
-  esPedido?: boolean;
-
-  @ApiProperty({ required: false, description: 'Fecha prometida de entrega, si es un pedido.' })
-  @IsOptional()
-  @IsISO8601({}, { message: 'La fecha de entrega no es valida.' })
-  fechaEntrega?: string;
-
-  @ApiProperty({
-    required: false,
-    description:
-      'Codigo (VNT-XXXX) de la venta hecha desde el punto de venta del catalogo web. ' +
-      'Uso interno del relevo; unico, evita crear la misma venta dos veces.',
-  })
-  @IsOptional()
-  @IsString()
-  webCodigo?: string;
 }

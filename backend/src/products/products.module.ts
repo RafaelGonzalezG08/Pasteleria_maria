@@ -3,10 +3,9 @@ import { ProductsService } from './products.service';
 import { ProductsController } from './products.controller';
 import { AuditModule } from '../audit/audit.module';
 import { InvoicesModule } from '../invoices/invoices.module';
-import { CatalogoModule } from '../catalogo/catalogo.module';
 
 @Module({
-  imports: [AuditModule, InvoicesModule, CatalogoModule],
+  imports: [AuditModule, InvoicesModule],
   controllers: [ProductsController],
   providers: [ProductsService],
   exports: [ProductsService],

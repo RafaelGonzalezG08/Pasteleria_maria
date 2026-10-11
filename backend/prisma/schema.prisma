@@ -1,12 +1,12 @@
-// Esquema de base de datos - Cafe Shopping
-// Sigue el modelo de datos definido en la especificacion del proyecto.
+// Esquema de base de datos - Pastelería María
+//
+// SQLite no tiene enums: los campos de estado/tipo son texto y sus valores
+// validos viven en src/common/enums.ts. Tampoco tiene tipo Json: las listas se
+// guardan como texto JSON (ver AuditLog.changes, Client.fechasEspeciales).
 
 generator client {
   provider      = "prisma-client-js"
-  // Solo Windows: la app de escritorio nunca corre en otro sistema, y sin
-  // esto Prisma tambien genera el motor de Linux (queda pegado de cuando
-  // este proyecto corria en Docker), que pesa ~35 MB de mas en el instalador
-  // sin que nadie lo use.
+  // Solo Windows: la app de escritorio nunca corre en otro sistema.
   binaryTargets = ["native"]
 }
 
@@ -15,34 +15,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ---------- Enums ----------
-
-
-
-
-
-// Estados por los que pasa un pedido antes de llegar al cliente.
-// ENTREGADO no llega a guardarse: al marcarlo, el pedido se borra y la
-// factura queda como el registro de la venta (ver orders.service.ts).
-
-// ---------- Modelos ----------
+// ---------- Usuarios ----------
 
 model User {
   id           String   @id @default(cuid())
   nombre       String
   email        String   @unique
   passwordHash String   @map("password_hash")
-  role         String     @default("CAJERO")
+  // ADMIN | CAJERO | REPOSTERO
+  role         String   @default("CAJERO")
   activo       Boolean  @default(true)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  sales      Sale[]
-  expenses   Expense[]
-  auditLogs  AuditLog[]
+  sales       Sale[]
+  expenses    Expense[]
+  auditLogs   AuditLog[]
+  movimientos MovimientoInsumo[]
+  producciones Produccion[]
+  compras     Compra[]
+  encargos    Encargo[]
+  pagosEncargo EncargoPago[]
+  mermasProducto MermaProducto[]
 
   @@map("users")
 }
+
+// ---------- Clientes ----------
 
 model Client {
   id                 String    @id @default(cuid())
@@ -51,51 +50,54 @@ model Client {
   email              String?
   direccion          String?
   notas              String?
+  // Solo dia y mes importan para el recordatorio; se guarda la fecha completa
+  // si el negocio la conoce (el año es opcional, se usa 2000 como relleno).
+  cumpleanos         DateTime?
+  // Otras fechas especiales (aniversario, cumpleaños de un hijo...).
+  // JSON: [{ "descripcion": "Aniversario", "fecha": "2026-05-14" }]
+  fechasEspeciales   String?   @map("fechas_especiales")
   lastReminderSentAt DateTime? @map("last_reminder_sent_at")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  sales Sale[]
-  debts ClientDebt[]
+  sales    Sale[]
+  debts    ClientDebt[]
+  encargos Encargo[]
 
   @@map("clients")
 }
+
+// ---------- Productos terminados ----------
 
 model Product {
   id             String   @id @default(cuid())
   sku            String   @unique
   nombre         String
   precioUnitario Decimal  @map("precio_unitario")
-  // Costo de adquisicion de la pieza. Solo visible/editable por ADMIN (ver
-  // ProductsController) - se usa para calcular margen en el apartado de Costos.
+  // Costo de producir una unidad. Si el producto tiene receta, se recalcula
+  // solo con el precio actual de los insumos (ver RecetasService) y al
+  // registrar cada produccion. Solo ADMIN lo ve.
   costoUnitario  Decimal  @default(0) @map("costo_unitario")
-  // Material de la pieza (PLATA, ORO, GOLDFILLED, ACERO, OTRO). Alimenta el
-  // filtro del catalogo web y la insignia en la esquina de la foto.
-  material       String   @default("OTRO")
   stock          Int      @default(0)
   imageUrl       String?  @map("image_url")
-  // Tallas / medidas que ofrece la pieza (anillos: "5", "6"...; cadenas:
-  // "45 cm"...). JSON serializado como texto (SQLite no tiene tipo Json).
-  // NULL o "[]" = la pieza no maneja tallas.
-  tallas         String?
+  descripcion    String?
   activo         Boolean  @default(true)
-  // Categoria de joya (Anillo, Collar, etc.), asignada SOLA cuando la primera
-  // palabra del nombre coincide exactamente con una categoria existente (ver
-  // ProductsService.clasificarCategoria()). Al borrar la categoria, el producto
-  // queda sin categoria (onDelete: SetNull).
   categoriaId    String?  @map("categoria_id")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  saleItems SaleItem[]
-  categoria Category?  @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+  saleItems    SaleItem[]
+  categoria    Category?     @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+  receta       Receta?
+  producciones Produccion[]
+  encargoItems EncargoItem[]
+  mermas       MermaProducto[]
 
   @@map("products")
   @@index([categoriaId])
 }
 
-// Categoria de joya (Anillo, Collar, Aretes, Pulsera, Reloj, ...), que el
-// negocio define a su gusto. Sirve para clasificar y filtrar el inventario.
+// Pasteles, panes, bizcochos, postres... (el negocio las define a su gusto).
 model Category {
   id        String   @id @default(cuid())
   nombre    String   @unique
@@ -106,33 +108,277 @@ model Category {
   @@map("categories")
 }
 
-model Sale {
-  id         String     @id @default(cuid())
-  fecha      DateTime   @default(now())
-  subtotal   Decimal
-  impuestos  Decimal    @default(0)
-  total      Decimal
-  // Porcentaje de descuento aplicado sobre el bruto de la venta (0-100),
-  // ANTES de calcular impuestos. Se guarda para que la factura ya generada
-  // siga mostrando el mismo descuento aunque cambie despues.
-  descuentoPct Decimal  @default(0) @map("descuento_pct")
-  metodoPago String @map("metodo_pago")
-  userId     String     @map("user_id")
-  clientId   String?    @map("client_id")
-  // Codigo (VNT-XXXX) de la venta hecha desde el punto de venta oculto del
-  // catalogo web. Unico para que el relevo no cree la misma venta dos veces.
-  // null en las ventas normales del mostrador.
-  webCodigo  String?    @unique @map("web_codigo")
-  createdAt  DateTime   @default(now()) @map("created_at")
+// Producto terminado que se bota (vencido, dañado, se cayo...).
+model MermaProducto {
+  id            String   @id @default(cuid())
+  productId     String   @map("product_id")
+  cantidad      Int
+  // Costo unitario del producto al momento de la merma, para el reporte.
+  costoUnitario Decimal  @default(0) @map("costo_unitario")
+  motivo        String?
+  userId        String?  @map("user_id")
+  fecha         DateTime @default(now())
 
-  user      User        @relation(fields: [userId], references: [id])
-  client    Client?     @relation(fields: [clientId], references: [id])
-  items     SaleItem[]
-  invoice   Invoice?
-  payments  Payment[]
-  order     Order?
-  debts     ClientDebt[]
-  webOrders WebOrder[]
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("mermas_producto")
+  @@index([fecha])
+}
+
+// ---------- Inventario de insumos ----------
+
+model Insumo {
+  id            String   @id @default(cuid())
+  nombre        String   @unique
+  // INGREDIENTE | MATERIAL (cajas, bases de pastel, velas...)
+  tipo          String   @default("INGREDIENTE")
+  // Unidad en la que se lleva el stock (g, kg, lb, ml, L, unidad, docena).
+  // Las compras y recetas pueden usar otra unidad de la misma familia; se
+  // convierte siempre a esta (ver common/unidades.ts).
+  unidad        String
+  stockActual   Decimal  @default(0) @map("stock_actual")
+  stockMinimo   Decimal  @default(0) @map("stock_minimo")
+  // Costo por unidad de stock. Promedio ponderado: cada compra lo actualiza.
+  costoUnitario Decimal  @default(0) @map("costo_unitario")
+  proveedorId   String?  @map("proveedor_id")
+  notas         String?
+  activo        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  proveedor    Proveedor?          @relation(fields: [proveedorId], references: [id], onDelete: SetNull)
+  lotes        LoteInsumo[]
+  movimientos  MovimientoInsumo[]
+  ingredientes RecetaIngrediente[]
+  compraItems  CompraItem[]
+  consumos     ProduccionConsumo[]
+
+  @@map("insumos")
+}
+
+// Cada entrada de un insumo es un lote, con su costo y su vencimiento. Las
+// salidas consumen primero el lote que vence antes (y si no vence, el mas
+// viejo). stockActual del insumo es siempre la suma de cantidadRestante.
+model LoteInsumo {
+  id                String    @id @default(cuid())
+  insumoId          String    @map("insumo_id")
+  cantidadInicial   Decimal   @map("cantidad_inicial")
+  cantidadRestante  Decimal   @map("cantidad_restante")
+  costoUnitario     Decimal   @default(0) @map("costo_unitario")
+  fechaVencimiento  DateTime? @map("fecha_vencimiento")
+  fechaEntrada      DateTime  @default(now()) @map("fecha_entrada")
+  compraItemId      String?   @map("compra_item_id")
+
+  insumo     Insumo      @relation(fields: [insumoId], references: [id], onDelete: Cascade)
+  compraItem CompraItem? @relation(fields: [compraItemId], references: [id], onDelete: SetNull)
+
+  @@map("lotes_insumo")
+  @@index([insumoId])
+  @@index([fechaVencimiento])
+}
+
+// Historial de todo lo que entra y sale de un insumo.
+model MovimientoInsumo {
+  id            String   @id @default(cuid())
+  insumoId      String   @map("insumo_id")
+  // ENTRADA | SALIDA | AJUSTE | MERMA | COMPRA | PRODUCCION
+  tipo          String
+  // Con signo y en la unidad del insumo: + entra, - sale.
+  cantidad      Decimal
+  costoUnitario Decimal  @default(0) @map("costo_unitario")
+  // Stock que quedo despues del movimiento (para leer el historial sin sumar).
+  stockResultante Decimal @map("stock_resultante")
+  motivo        String?
+  produccionId  String?  @map("produccion_id")
+  compraId      String?  @map("compra_id")
+  userId        String?  @map("user_id")
+  fecha         DateTime @default(now())
+
+  insumo     Insumo      @relation(fields: [insumoId], references: [id], onDelete: Cascade)
+  produccion Produccion? @relation(fields: [produccionId], references: [id], onDelete: SetNull)
+  compra     Compra?     @relation(fields: [compraId], references: [id], onDelete: SetNull)
+  user       User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("movimientos_insumo")
+  @@index([insumoId])
+  @@index([fecha])
+  @@index([tipo])
+}
+
+// ---------- Recetas ----------
+
+model Receta {
+  id                  String   @id @default(cuid())
+  nombre              String   @unique
+  // true = subreceta (relleno, crema, masa...) que se usa dentro de otras.
+  esSubreceta         Boolean  @default(false) @map("es_subreceta")
+  // Cuanto sale de una tanda: "24 unidad", "1 unidad", "1500 g", "2 L"...
+  rendimiento         Decimal
+  unidadRendimiento   String   @map("unidad_rendimiento")
+  // Porciones que da una tanda (un pastel = 1 unidad pero 12 porciones). Si
+  // es null, el costo por porcion es el costo por unidad de rendimiento.
+  porciones           Int?
+  tiempoPreparacionMin Int?    @map("tiempo_preparacion_min")
+  pasos               String?
+  // Margen de ganancia para el precio sugerido. null = el del negocio.
+  margenPct           Decimal? @map("margen_pct")
+  // Producto terminado que esta receta produce (solo recetas finales).
+  productoId          String?  @unique @map("producto_id")
+  activo              Boolean  @default(true)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  producto     Product?            @relation(fields: [productoId], references: [id], onDelete: SetNull)
+  ingredientes RecetaIngrediente[] @relation("IngredientesDeReceta")
+  usadaEn      RecetaIngrediente[] @relation("SubrecetaUsada")
+  producciones Produccion[]
+
+  @@map("recetas")
+}
+
+// Linea de una receta: o un insumo, o una subreceta (exactamente uno).
+model RecetaIngrediente {
+  id          String  @id @default(cuid())
+  recetaId    String  @map("receta_id")
+  insumoId    String? @map("insumo_id")
+  subrecetaId String? @map("subreceta_id")
+  cantidad    Decimal
+  unidad      String
+  orden       Int     @default(0)
+
+  receta    Receta  @relation("IngredientesDeReceta", fields: [recetaId], references: [id], onDelete: Cascade)
+  insumo    Insumo? @relation(fields: [insumoId], references: [id], onDelete: Restrict)
+  subreceta Receta? @relation("SubrecetaUsada", fields: [subrecetaId], references: [id], onDelete: Restrict)
+
+  @@map("receta_ingredientes")
+  @@index([recetaId])
+}
+
+// ---------- Produccion ----------
+
+model Produccion {
+  id                 String   @id @default(cuid())
+  fecha              DateTime @default(now())
+  recetaId           String   @map("receta_id")
+  // Factor de la receta: 1 = una tanda, 2.5 = dos tandas y media.
+  tandas             Decimal
+  // Unidades de producto terminado que se sumaron al inventario.
+  unidadesProducidas Int      @default(0) @map("unidades_producidas")
+  productoId         String?  @map("producto_id")
+  costoTotal         Decimal  @default(0) @map("costo_total")
+  notas              String?
+  userId             String?  @map("user_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  receta      Receta              @relation(fields: [recetaId], references: [id], onDelete: Restrict)
+  producto    Product?            @relation(fields: [productoId], references: [id], onDelete: SetNull)
+  user        User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  consumos    ProduccionConsumo[]
+  movimientos MovimientoInsumo[]
+
+  @@map("producciones")
+  @@index([fecha])
+}
+
+model ProduccionConsumo {
+  id            String  @id @default(cuid())
+  produccionId  String  @map("produccion_id")
+  insumoId      String  @map("insumo_id")
+  // En la unidad del insumo.
+  cantidad      Decimal
+  costoUnitario Decimal @map("costo_unitario")
+
+  produccion Produccion @relation(fields: [produccionId], references: [id], onDelete: Cascade)
+  insumo     Insumo     @relation(fields: [insumoId], references: [id], onDelete: Restrict)
+
+  @@map("produccion_consumos")
+  @@index([produccionId])
+}
+
+// ---------- Proveedores y compras ----------
+
+model Proveedor {
+  id        String   @id @default(cuid())
+  nombre    String
+  contacto  String?
+  telefono  String?
+  email     String?
+  direccion String?
+  notas     String?
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  insumos Insumo[]
+  compras Compra[]
+
+  @@map("proveedores")
+}
+
+model Compra {
+  id            String   @id @default(cuid())
+  fecha         DateTime @default(now())
+  proveedorId   String?  @map("proveedor_id")
+  numeroFactura String?  @map("numero_factura")
+  total         Decimal
+  notas         String?
+  // Gasto que se registro junto con la compra (para que el flujo de caja la
+  // cuente). null si se eligio no registrarla como gasto.
+  expenseId     String?  @unique @map("expense_id")
+  userId        String?  @map("user_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  proveedor   Proveedor?         @relation(fields: [proveedorId], references: [id], onDelete: SetNull)
+  user        User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  expense     Expense?           @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+  items       CompraItem[]
+  movimientos MovimientoInsumo[]
+
+  @@map("compras")
+  @@index([fecha])
+}
+
+model CompraItem {
+  id               String    @id @default(cuid())
+  compraId         String    @map("compra_id")
+  insumoId         String    @map("insumo_id")
+  // Tal como se compro (ej. 2 lb); el lote guarda lo convertido a la unidad del insumo.
+  cantidad         Decimal
+  unidad           String
+  costoTotal       Decimal   @map("costo_total")
+  fechaVencimiento DateTime? @map("fecha_vencimiento")
+
+  compra Compra       @relation(fields: [compraId], references: [id], onDelete: Cascade)
+  insumo Insumo       @relation(fields: [insumoId], references: [id], onDelete: Restrict)
+  lotes  LoteInsumo[]
+
+  @@map("compra_items")
+}
+
+// ---------- Ventas ----------
+
+model Sale {
+  id           String   @id @default(cuid())
+  fecha        DateTime @default(now())
+  subtotal     Decimal
+  impuestos    Decimal  @default(0)
+  total        Decimal
+  // Porcentaje de descuento sobre el bruto (0-100), ANTES de impuestos.
+  descuentoPct Decimal  @default(0) @map("descuento_pct")
+  metodoPago   String   @map("metodo_pago")
+  userId       String   @map("user_id")
+  clientId     String?  @map("client_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user     User         @relation(fields: [userId], references: [id])
+  client   Client?      @relation(fields: [clientId], references: [id])
+  items    SaleItem[]
+  invoice  Invoice?
+  payments Payment[]
+  debts    ClientDebt[]
+  // Encargo que se entrego con esta venta (si vino de un encargo).
+  encargo  Encargo?
 
   @@map("sales")
   @@index([fecha])
@@ -146,9 +392,8 @@ model SaleItem {
   descripcion    String
   cantidad       Int
   precioUnitario Decimal @map("precio_unitario")
-  // Copia del costo del producto al momento de la venta (igual que
-  // precioUnitario), para que el margen historico no cambie si luego se
-  // edita el costo del producto en el catalogo.
+  // Copia del costo del producto al momento de la venta, para que el margen
+  // historico no cambie si luego cambia el precio de los insumos.
   costoUnitario  Decimal @default(0) @map("costo_unitario")
   total          Decimal
 
@@ -159,25 +404,23 @@ model SaleItem {
 }
 
 model Invoice {
-  id             String        @id @default(cuid())
-  saleId         String        @unique @map("sale_id")
-  numero         String        @unique
-  estado         String @default("PENDIENTE")
-  pdfUrl         String?       @map("pdf_url")
-  pngUrl         String?       @map("png_url")
-  sentWhatsappAt DateTime?     @map("sent_whatsapp_at")
-  ultimoError    String?       @map("ultimo_error")
+  id             String    @id @default(cuid())
+  saleId         String    @unique @map("sale_id")
+  numero         String    @unique
+  estado         String    @default("PENDIENTE")
+  pdfUrl         String?   @map("pdf_url")
+  pngUrl         String?   @map("png_url")
+  sentWhatsappAt DateTime? @map("sent_whatsapp_at")
+  ultimoError    String?   @map("ultimo_error")
 
-  // Cola de envio por WhatsApp (ver whatsapp-queue.service.ts). El envio ya no
-  // bloquea la peticion: se encola y un proceso en segundo plano lo procesa con
-  // reintentos.
+  // Cola de envio por WhatsApp (ver whatsapp-queue.service.ts).
   whatsappEstado         String?   @map("whatsapp_estado") // EN_COLA | ENVIADA | ERROR | null
   whatsappIntentos       Int       @default(0) @map("whatsapp_intentos")
   whatsappProximoIntento DateTime? @map("whatsapp_proximo_intento")
   whatsappMensaje        String?   @map("whatsapp_mensaje")
 
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   sale Sale @relation(fields: [saleId], references: [id])
 
@@ -185,13 +428,14 @@ model Invoice {
   @@index([whatsappEstado])
 }
 
+// Abono a una venta a credito (ver client-debts).
 model Payment {
-  id        String     @id @default(cuid())
-  saleId    String     @map("sale_id")
+  id        String   @id @default(cuid())
+  saleId    String   @map("sale_id")
   amount    Decimal
-  fecha     DateTime   @default(now())
+  fecha     DateTime @default(now())
   metodo    String
-  createdAt DateTime   @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   sale Sale @relation(fields: [saleId], references: [id])
 
@@ -199,19 +443,17 @@ model Payment {
 }
 
 model ClientDebt {
-  id          String      @id @default(cuid())
-  clientId    String      @map("client_id")
-  saleId      String?     @map("sale_id")
-  amountTotal Decimal     @map("amount_total")
-  amountPaid  Decimal     @default(0) @map("amount_paid")
-  dueDate     DateTime?   @map("due_date")
-  status      String @default("PENDIENTE")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  id          String    @id @default(cuid())
+  clientId    String    @map("client_id")
+  saleId      String?   @map("sale_id")
+  amountTotal Decimal   @map("amount_total")
+  amountPaid  Decimal   @default(0) @map("amount_paid")
+  dueDate     DateTime? @map("due_date")
+  status      String    @default("PENDIENTE")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  client Client @relation(fields: [clientId], references: [id])
-  // Al borrar la venta se borra su deuda (sales.service.ts ya lo hacia a mano,
-  // y ademas rechaza el borrado si el cliente ya abono algo).
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
   sale   Sale?  @relation(fields: [saleId], references: [id], onDelete: Cascade)
 
   @@map("client_debts")
@@ -229,69 +471,98 @@ model Expense {
   userId      String   @map("user_id")
   createdAt   DateTime @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id])
+  user   User    @relation(fields: [userId], references: [id])
+  compra Compra?
 
   @@map("expenses")
   @@index([fecha])
 }
 
-// Pedido pendiente de entregar al cliente.
-//
-// Solo existe mientras la pieza no ha llegado a manos del cliente: al
-// marcarlo ENTREGADO se borra la fila, y la factura de la venta queda como
-// el registro permanente (por eso `onDelete: Cascade` hacia Sale — si se
-// borra la venta, el pedido se va con ella).
-model Order {
-  id           String       @id @default(cuid())
-  saleId       String       @unique @map("sale_id")
-  estado       String @default("PENDIENTE")
-  // Fecha en la que se le prometio la entrega al cliente. Es lo que ordena
-  // el listado y lo que el Dashboard usa para marcar atrasos.
-  fechaEntrega DateTime?    @map("fecha_entrega")
-  notas        String?
-  createdAt    DateTime     @default(now()) @map("created_at")
-  updatedAt    DateTime     @updatedAt @map("updated_at")
+// ---------- Encargos (pedidos de clientes) ----------
 
-  sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+// Pedido que un cliente encarga para una fecha: un pastel de cumpleaños, 50
+// bizcochos para una fiesta... Todavia no es una venta: se vuelve venta (con
+// su factura) al entregarse. Mientras tanto acumula anticipos/abonos.
+model Encargo {
+  id               String    @id @default(cuid())
+  // ENC-2026-00001
+  codigo           String    @unique
+  clientId         String    @map("client_id")
+  fechaEntrega     DateTime  @map("fecha_entrega")
+  // DOMICILIO | RETIRO
+  tipoEntrega      String    @default("RETIRO") @map("tipo_entrega")
+  direccionEntrega String?   @map("direccion_entrega")
+  costoEnvio       Decimal   @default(0) @map("costo_envio")
+  // PENDIENTE | EN_PRODUCCION | LISTO | ENTREGADO | CANCELADO
+  estado           String    @default("PENDIENTE")
+  subtotal         Decimal   @default(0)
+  impuestos        Decimal   @default(0)
+  total            Decimal   @default(0)
+  tasaImpuesto     Decimal   @default(0) @map("tasa_impuesto")
+  // Suma de los pagos (anticipos/abonos) recibidos.
+  abonado          Decimal   @default(0)
+  notas            String?
+  motivoCancelacion String?  @map("motivo_cancelacion")
+  // Venta que se creo al entregarlo.
+  saleId           String?   @unique @map("sale_id")
+  entregadoAt      DateTime? @map("entregado_at")
+  userId           String?   @map("user_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  @@map("orders")
+  client Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  sale   Sale?         @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  user   User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items  EncargoItem[]
+  pagos  EncargoPago[]
+
+  @@map("encargos")
   @@index([estado])
   @@index([fechaEntrega])
+  @@index([clientId])
 }
 
-// Pedido que llego por el catalogo web, pegando el mensaje de WhatsApp del
-// cliente (ver modulo web-orders).
-//
-// No es un Order comun a proposito: un Order envuelve una Sale ya cobrada en
-// el POS, y un pedido web todavia no es una venta — es una intencion de
-// compra sin cliente identificado (la pagina no pide datos a proposito). El
-// codigo (ej. "PED-K3F7Q2") es el unico hilo entre lo que el cliente escribio
-// por WhatsApp y esta fila.
-model WebOrder {
+model EncargoItem {
+  id             String  @id @default(cuid())
+  encargoId      String  @map("encargo_id")
+  productId      String? @map("product_id")
+  descripcion    String
+  cantidad       Int
+  precioUnitario Decimal @map("precio_unitario")
+  total          Decimal
+  // Personalizacion (sobre todo para pasteles).
+  tamano         String?
+  sabor          String?
+  relleno        String?
+  decoracion     String?
+  mensaje        String?
+  fotoReferenciaUrl String? @map("foto_referencia_url")
+
+  encargo Encargo  @relation(fields: [encargoId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@map("encargo_items")
+  @@index([encargoId])
+}
+
+// Anticipo o abono recibido por un encargo (incluido el pago final al entregar).
+model EncargoPago {
   id        String   @id @default(cuid())
-  codigo    String   @unique
-  // Piezas del pedido, serializadas: [{sku,nombre,cantidad,precioUnitario,total}].
-  // SQLite no tiene tipo Json (ver AuditLog.changes para el mismo patron).
-  items     String
-  total     Decimal
-  estado    String   @default("PENDIENTE")
-  // Texto completo tal como se pego, por si el resumen no alcanza (ej. el
-  // cliente agrego una nota debajo del pedido).
-  textoOriginal String @map("texto_original")
-  notas     String?
-  // Venta que se genero al "atender" este pedido (ver web-orders.service.ts
-  // -> atender()). Si esa venta se borra, el pedido web NO desaparece con
-  // ella: solo se queda sin el vinculo (onDelete: SetNull).
-  saleId    String?  @map("sale_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  encargoId String   @map("encargo_id")
+  monto     Decimal
+  metodo    String
+  nota      String?
+  userId    String?  @map("user_id")
+  fecha     DateTime @default(now())
 
-  sale Sale? @relation(fields: [saleId], references: [id], onDelete: SetNull)
+  encargo Encargo @relation(fields: [encargoId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@map("web_orders")
-  @@index([estado])
-  @@index([saleId])
+  @@map("encargo_pagos")
+  @@index([fecha])
 }
+
+// ---------- Auditoria y configuracion ----------
 
 model AuditLog {
   id        String   @id @default(cuid())
@@ -299,8 +570,7 @@ model AuditLog {
   entityId  String   @map("entity_id")
   action    String
   userId    String?  @map("user_id")
-  // SQLite no tiene tipo Json: se guarda el JSON serializado como texto.
-  // AuditService se encarga de convertirlo en ambos sentidos.
+  // JSON serializado como texto (SQLite no tiene tipo Json).
   changes   String?
   timestamp DateTime @default(now())
 
@@ -310,43 +580,27 @@ model AuditLog {
   @@index([entity, entityId])
 }
 
-// Perfil unico del negocio (fila singleton) usado en el modulo de Configuracion.
+// Perfil unico del negocio (fila singleton) usado en Configuracion.
 model BusinessProfile {
-  id           String   @id @default(cuid())
-  nombre       String   @default("Cafe Shopping")
-  logoUrl      String?  @map("logo_url")
-  direccion    String?
-  identifFiscal String? @map("identif_fiscal")
-  tasaImpuesto Decimal  @default(0.18) @map("tasa_impuesto")
-
-  // ----- Datos que solo usa el catalogo web -----
-  // Numero al que llegan los pedidos del catalogo. Es distinto del telefono
-  // de contacto: aqui va el que tiene WhatsApp abierto en el negocio.
-  telefonoWhatsapp String? @map("telefono_whatsapp")
-  // Frase corta bajo el nombre en el catalogo (ej. "Joyeria fina en Santiago").
-  descripcionWeb   String? @map("descripcion_web")
-  // Como pagar por transferencia: banco, tipo de cuenta, numero y a nombre de
-  // quien. Es texto libre porque cada negocio lo escribe a su manera.
-  datosPago        String? @map("datos_pago")
-
-  // Relevo en la nube (opcional) para que los pedidos del catalogo caigan
-  // solos en Pedidos web, sin pegar el mensaje a mano. Ver /cloud-relay en
-  // la raiz del repo. Sin esto, el catalogo sigue funcionando igual, solo
-  // por WhatsApp.
-  relevoPedidosUrl   String? @map("relevo_pedidos_url")
-  relevoPedidosClave String? @map("relevo_pedidos_clave")
-
-  // Publicacion automatica del catalogo a Cloudflare Pages (opcional). Con el
-  // token de API, el Account ID y el nombre del proyecto puestos, la app sube
-  // el sitio por la API de Cloudflare despues de cada regeneracion, asi no
-  // hay que volver a arrastrar el folder cuando algo se agota o cambia. Se
-  // eligio Cloudflare y no Netlify porque el plan gratis de Netlify cambio a
-  // un sistema de creditos que no alcanza para publicar en cada venta.
-  cloudflareApiToken    String? @map("cloudflare_api_token")
-  cloudflareAccountId   String? @map("cloudflare_account_id")
-  cloudflarePagesProject String? @map("cloudflare_pages_project")
-
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(cuid())
+  nombre        String   @default("Pastelería María")
+  logoUrl       String?  @map("logo_url")
+  direccion     String?
+  telefono      String?
+  identifFiscal String?  @map("identif_fiscal")
+  // Simbolo de la moneda que se muestra en pantalla y en la factura.
+  moneda        String   @default("RD$")
+  // Nombre y tasa del impuesto (ITBIS 18% en RD).
+  nombreImpuesto String  @default("ITBIS") @map("nombre_impuesto")
+  tasaImpuesto  Decimal  @default(0.18) @map("tasa_impuesto")
+  // Margen de ganancia por defecto para el precio sugerido de las recetas.
+  margenGananciaPct Decimal @default(60) @map("margen_ganancia_pct")
+  // Avisos: encargos que se entregan dentro de N dias, insumos que vencen
+  // dentro de N dias, cumpleaños de clientes dentro de N dias.
+  diasAlertaEncargos    Int @default(2) @map("dias_alerta_encargos")
+  diasAlertaVencimiento Int @default(7) @map("dias_alerta_vencimiento")
+  diasAlertaCumpleanos  Int @default(7) @map("dias_alerta_cumpleanos")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@map("business_profile")
 }

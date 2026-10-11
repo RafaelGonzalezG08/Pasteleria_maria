@@ -49,7 +49,7 @@ describe('SalesService.calculateTotals', () => {
 /** Crea un SalesService con dependencias falsas; se sobrescriben por test. */
 function crearService(overrides: { prisma?: any } = {}) {
   const prisma = overrides.prisma ?? {};
-  return new SalesService(prisma, {} as any, {} as any, {} as any);
+  return new SalesService(prisma, {} as any, {} as any);
 }
 
 describe('SalesService.generateInvoiceNumber', () => {
