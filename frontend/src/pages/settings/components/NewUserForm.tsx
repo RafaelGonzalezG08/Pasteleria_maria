@@ -26,14 +26,14 @@ export function NewUserForm({ onSubmit }: { onSubmit: (payload: CrearUsuarioDto)
         placeholder="Nombre"
         value={form.nombre}
         onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-        className="w-full rounded-lg border border-porcelain-300 px-3 py-1.5 text-sm outline-none focus:border-copper-500"
+        className="w-full rounded-lg px-3 py-1.5 text-sm outline-none"
       />
       <input
         placeholder="Correo"
         type="email"
         value={form.email}
         onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-        className="w-full rounded-lg border border-porcelain-300 px-3 py-1.5 text-sm outline-none focus:border-copper-500"
+        className="w-full rounded-lg px-3 py-1.5 text-sm outline-none"
       />
       <div className="flex gap-2">
         <input
@@ -41,7 +41,7 @@ export function NewUserForm({ onSubmit }: { onSubmit: (payload: CrearUsuarioDto)
           type="password"
           value={form.password}
           onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-          className="min-w-0 flex-1 rounded-lg border border-porcelain-300 px-3 py-1.5 text-sm outline-none focus:border-copper-500"
+          className="min-w-0 flex-1 rounded-lg px-3 py-1.5 text-sm outline-none"
         />
         <Select
           value={form.role}
@@ -50,8 +50,8 @@ export function NewUserForm({ onSubmit }: { onSubmit: (payload: CrearUsuarioDto)
           size="sm"
           options={[
             { value: 'CAJERO', label: 'Cajero' },
-            { value: 'CONTABILIDAD', label: 'Contabilidad' },
-            { value: 'ADMIN', label: 'Admin' },
+            { value: 'REPOSTERO', label: 'Repostero' },
+            { value: 'ADMIN', label: 'Administrador' },
           ]}
         />
       </div>

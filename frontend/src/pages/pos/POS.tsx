@@ -1,16 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Minus, Plus, Search, Trash2, MessageCircle, Loader2, Receipt, X, Gem, Check, Package } from 'lucide-react';
+import { Minus, Plus, Search, Trash2, MessageCircle, Loader2, Receipt, X, CakeSlice, Check } from 'lucide-react';
 import { apiUrl, urlConToken } from '../../lib/api';
 import { productsApi } from '../../api/products.api';
 import { settingsApi } from '../../api/settings.api';
 import { salesApi } from '../../api/sales.api';
-import {
-  abrirPestanaRespaldoSiHaceFalta,
-  enviarWhatsappDesdeCelular,
-  esEnvioDirecto,
-} from '../../lib/whatsappDirecto';
 import { usePersistedState } from '../../lib/usePersistedState';
 import { formatMoney, METODO_PAGO_LABEL } from '../../lib/format';
 import { coincideBusqueda } from '../../lib/search';
@@ -43,10 +38,6 @@ export default function POS() {
   const [metodoPago, setMetodoPago] = usePersistedState<MetodoPago>('pos:metodo-pago', 'EFECTIVO');
   const [descuentoPct, setDescuentoPct] = usePersistedState('pos:descuento', '');
   const [fechaVencimiento, setFechaVencimiento] = usePersistedState('pos:vencimiento', '');
-  // Pedido por entregar: la pieza no sale hoy con el cliente, queda en el
-  // registro de Pedidos hasta que se entregue.
-  const [esPedido, setEsPedido] = usePersistedState('pos:es-pedido', false);
-  const [fechaEntrega, setFechaEntrega] = usePersistedState('pos:fecha-entrega', '');
   // completedSale NO se persiste: es el resultado de una venta ya cerrada, no
   // trabajo a medias, y volver a la pantalla mostrando una factura vieja
   // haria pensar que la venta se acaba de hacer otra vez.
@@ -58,7 +49,7 @@ export default function POS() {
   });
 
   // El carrito se guarda en el navegador. Si un producto que quedo dentro se
-  // borro despues (limpieza de duplicados, importacion de inventario, etc.),
+  // borro despues (se dio de baja, se elimino, etc.),
   // su ID ya no vale y la venta se caia. Al cargar la lista real de productos
   // se limpian esas lineas muertas y se avisa cuales.
   useEffect(() => {
@@ -68,10 +59,10 @@ export default function POS() {
     if (muertas.length === 0) return;
     setCart((prev) => prev.filter((l) => !l.productId || vivos.has(l.productId)));
     toast.error(
-      `Se quitaron del carrito piezas que ya no estan en el inventario: ${muertas
+      `Se quitaron del carrito productos que ya no estan en el catalogo: ${muertas
         .map((l) => l.descripcion)
         .join(', ')}.`,
-      { id: 'carrito-piezas-muertas', duration: 6000 },
+      { id: 'carrito-productos-muertos', duration: 6000 },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productsLoaded, products]);
@@ -101,7 +92,7 @@ export default function POS() {
     };
   }, [cart, tasaImpuesto, descuentoPct]);
 
-  // Picar una pieza del catalogo la agrega; picar la misma pieza de nuevo la
+  // Picar un producto del catalogo lo agrega; picar el mismo producto de nuevo lo
   // QUITA del carrito (toggle), en vez de sumarle cantidad -- para subir la
   // cantidad de algo que ya esta en el carrito estan los botones +/- de ahi.
   function toggleProduct(product: Product) {
@@ -169,8 +160,6 @@ export default function POS() {
     setSelectedClient(null);
     setMetodoPago('EFECTIVO');
     setFechaVencimiento('');
-    setEsPedido(false);
-    setFechaEntrega('');
     setDescuentoPct('');
     setCompletedSale(null);
   }
@@ -181,8 +170,6 @@ export default function POS() {
         clientId: selectedClientId || undefined,
         metodoPago,
         fechaVencimiento: metodoPago === 'CREDITO' && fechaVencimiento ? fechaVencimiento : undefined,
-        esPedido: esPedido || undefined,
-        fechaEntrega: esPedido && fechaEntrega ? fechaEntrega : undefined,
         descuentoPct: Number(descuentoPct) || undefined,
         items: cart.map((l) => ({
           // `|| undefined`: un articulo manual no lleva producto; si se manda
@@ -194,11 +181,10 @@ export default function POS() {
         })),
       }),
     onSuccess: (sale) => {
-      toast.success(esPedido ? 'Venta registrada y agregada a Pedidos.' : 'Venta registrada.');
+      toast.success('Venta registrada.');
       setCompletedSale(sale);
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
   });
 
@@ -254,7 +240,7 @@ export default function POS() {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <Gem size={22} className="text-muted" />
+                  <CakeSlice size={22} className="text-muted" />
                 )}
               </div>
               <div className="p-3.5">
@@ -402,38 +388,6 @@ export default function POS() {
               className="mt-1.5 w-full rounded-lg border border-porcelain-300 px-3 py-2 text-sm outline-none focus:border-copper-500"
             />
           )}
-
-          {/* Pedido por entregar: la pieza no sale hoy con el cliente. */}
-          <div className={`mt-3 rounded-lg border p-3 ${esPedido ? 'border-copper-400 bg-copper-50' : 'border-porcelain-300'}`}>
-            <label className="flex cursor-pointer items-center gap-2.5">
-              <input
-                type="checkbox"
-                checked={esPedido}
-                onChange={(e) => setEsPedido(e.target.checked)}
-                className="h-4 w-4 accent-copper-500"
-              />
-              <span className="flex items-center gap-1.5 text-sm font-semibold text-ink">
-                <Package size={15} className={esPedido ? 'text-copper-600' : 'text-muted'} />
-                Es un pedido por entregar
-              </span>
-            </label>
-            {esPedido && (
-              <div className="mt-2.5">
-                <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted">
-                  Fecha de entrega
-                </label>
-                <input
-                  type="date"
-                  value={fechaEntrega}
-                  onChange={(e) => setFechaEntrega(e.target.value)}
-                  className="w-full rounded-lg border border-porcelain-300 px-3 py-2 text-sm outline-none focus:border-copper-500"
-                />
-                <p className="mt-1.5 text-[11px] text-muted">
-                  Aparecera en Pedidos y en el Dashboard hasta que lo marques como entregado.
-                </p>
-              </div>
-            )}
-          </div>
         </div>
 
         <Button
@@ -472,21 +426,15 @@ export function InvoicePreview({
   const waEstado = sale.invoice?.whatsappEstado;
 
   const sendWhatsapp = useMutation({
-    mutationFn: (pestanaRespaldo: Window | null) => salesApi.sendWhatsapp(sale.id, { skipErrorToast: true }),
-    onSuccess: async (resultado, pestanaRespaldo) => {
-      if (esEnvioDirecto(resultado)) {
-        await enviarWhatsappDesdeCelular(resultado, pestanaRespaldo);
-        return;
-      }
-      pestanaRespaldo?.close();
+    mutationFn: () => salesApi.sendWhatsapp(sale.id, { skipErrorToast: true }),
+    onSuccess: (resultado) => {
       queryClient.setQueryData<Sale>(['sale', sale.id], (prev) =>
         prev ? { ...prev, invoice: { ...prev.invoice, ...resultado } } : prev,
       );
       queryClient.invalidateQueries({ queryKey: ['sale', sale.id] });
       toast.success('En cola de envío. Se enviará por WhatsApp en unos segundos.');
     },
-    onError: (error: any, pestanaRespaldo) => {
-      pestanaRespaldo?.close();
+    onError: (error: any) => {
       toast.error(error?.response?.data?.message ?? 'No se pudo poner la factura en cola.');
     },
   });
@@ -526,7 +474,7 @@ export function InvoicePreview({
           {sale.client?.telefono ? (
             <Button
               className="w-full"
-              onClick={() => sendWhatsapp.mutate(abrirPestanaRespaldoSiHaceFalta())}
+              onClick={() => sendWhatsapp.mutate()}
               disabled={sendWhatsapp.isPending || waEstado === 'EN_COLA'}
             >
               {sendWhatsapp.isPending ? <Loader2 size={16} className="animate-spin" /> : <MessageCircle size={16} />}

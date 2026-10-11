@@ -1,71 +1,63 @@
 import { api } from '../lib/api';
-import type { Category, Material, Product } from '../types';
+import type { Category, Product } from '../types';
 
 export type ProductFormValues = {
   nombre: string;
   precioUnitario: string;
   costoUnitario: string;
-  material: Material;
   stock: string;
-  /** Tallas / medidas que el negocio ofrece de esta pieza (el cliente elige en el catalogo). */
-  tallas: string[];
+  categoriaId: string;
+  descripcion: string;
   file: File | null;
 };
 
-export interface GrupoDuplicado {
-  nombre: string;
-  precioUnitario: number;
-  tamanoFotoBytes: number;
-  mantiene: { id: string; sku: string };
-  elimina: { id: string; sku: string }[];
-}
-
-export interface VistaPreviaLimpieza {
-  grupos: GrupoDuplicado[];
-  sinFoto: { id: string; sku: string; nombre: string }[];
-  totalABaja: number;
-}
-
-export interface VistaPreviaEliminarDuplicados {
-  grupos: GrupoDuplicado[];
-  totalEliminables: number;
-  omitidosPorVentas: { id: string; sku: string; nombre: string }[];
-}
-
-function buildFormData(values: ProductFormValues) {
+function buildFormData(values: ProductFormValues, incluirCosto: boolean) {
   const formData = new FormData();
   formData.append('nombre', values.nombre.trim());
   formData.append('precioUnitario', String(Number(values.precioUnitario) || 0));
-  formData.append('costoUnitario', String(Number(values.costoUnitario) || 0));
-  formData.append('material', values.material);
+  if (incluirCosto) formData.append('costoUnitario', String(Number(values.costoUnitario) || 0));
   formData.append('stock', String(Number(values.stock) || 0));
-  formData.append('tallas', JSON.stringify(values.tallas ?? []));
+  formData.append('categoriaId', values.categoriaId);
+  formData.append('descripcion', values.descripcion.trim());
   if (values.file) formData.append('file', values.file);
   return formData;
 }
 
+export interface MermaProducto {
+  id: string;
+  fecha: string;
+  cantidad: number;
+  costoUnitario?: number;
+  motivo?: string | null;
+  product: { id: string; nombre: string };
+  user?: { nombre: string } | null;
+}
+
 export const productsApi = {
   list: (all = false) => api.get<Product[]>('/products', { params: { all: all || undefined } }).then((r) => r.data),
-  create: (values: ProductFormValues) =>
+  /**
+   * `incluirCosto`: un producto con receta toma su costo de la receta; mandar
+   * el costo del formulario lo pisaria con el valor viejo.
+   */
+  create: (values: ProductFormValues, incluirCosto = true) =>
     api
-      .post('/products', buildFormData(values), { headers: { 'Content-Type': 'multipart/form-data' } })
+      .post<Product>('/products', buildFormData(values, incluirCosto), {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
       .then((r) => r.data),
-  update: (id: string, values: ProductFormValues) =>
+  update: (id: string, values: ProductFormValues, incluirCosto = true) =>
     api
-      .put(`/products/${id}`, buildFormData(values), { headers: { 'Content-Type': 'multipart/form-data' } })
+      .put<Product>(`/products/${id}`, buildFormData(values, incluirCosto), {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
       .then((r) => r.data),
   delete: (id: string) => api.delete(`/products/${id}`).then((r) => r.data),
   restore: (id: string) => api.put(`/products/${id}`, { activo: true }).then((r) => r.data),
-  previewDuplicados: () =>
-    api.get<VistaPreviaLimpieza>('/products/duplicados/vista-previa').then((r) => r.data),
-  limpiarDuplicados: () =>
-    api.post<{ bajaDuplicados: number; bajaSinFoto: number }>('/products/duplicados/limpiar').then((r) => r.data),
-  previewEliminarDuplicados: () =>
-    api
-      .get<VistaPreviaEliminarDuplicados>('/products/duplicados/vista-previa-eliminar')
-      .then((r) => r.data),
-  eliminarDuplicados: () =>
-    api.post<{ eliminados: number }>('/products/duplicados/eliminar').then((r) => r.data),
+  quitarFoto: (id: string) => api.delete(`/products/${id}/photo`).then((r) => r.data),
+  merma: (id: string, cantidad: number, motivo?: string) =>
+    api.post<Product>(`/products/${id}/merma`, { cantidad, motivo }).then((r) => r.data),
+  mermas: (params: { from?: string; to?: string }) =>
+    api.get<MermaProducto[]>('/products/mermas', { params }).then((r) => r.data),
   bulkBaja: (ids: string[]) => api.post<{ actualizados: number }>('/products/bulk/baja', { ids }).then((r) => r.data),
   bulkReactivar: (ids: string[]) =>
     api.post<{ actualizados: number }>('/products/bulk/reactivar', { ids }).then((r) => r.data),
@@ -79,7 +71,6 @@ export const productsApi = {
 
 export const categoriesApi = {
   list: () => api.get<Category[]>('/categories').then((r) => r.data),
-  create: (nombre: string) =>
-    api.post<{ clasificadas?: number }>('/categories', { nombre }, { skipErrorToast: true }).then((r) => r.data),
+  create: (nombre: string) => api.post<Category>('/categories', { nombre }, { skipErrorToast: true }).then((r) => r.data),
   delete: (id: string) => api.delete(`/categories/${id}`).then((r) => r.data),
 };

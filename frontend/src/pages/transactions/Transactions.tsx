@@ -20,18 +20,21 @@ function endpointDeBorrado(t: Transaccion): { url: string; body: (password: stri
   const id = t.id.slice(t.id.indexOf('-') + 1);
   if (t.tipo === 'VENTA') return { url: `/sales/${id}`, body: (password) => ({ adminPassword: password }) };
   if (t.tipo === 'ABONO') return { url: `/client-debts/payments/${id}`, body: (password) => ({ password }) };
+  if (t.tipo === 'ANTICIPO') return { url: `/encargos/pagos/${id}`, body: () => ({}) };
   return { url: `/expenses/${id}`, body: (password) => ({ password }) };
 }
 
 const TIPOS: { value: TipoTransaccion; label: string; tone: 'copper' | 'sage' | 'brick' }[] = [
   { value: 'VENTA', label: 'Ventas', tone: 'copper' },
   { value: 'ABONO', label: 'Abonos', tone: 'sage' },
+  { value: 'ANTICIPO', label: 'Anticipos', tone: 'sage' },
   { value: 'GASTO', label: 'Gastos', tone: 'brick' },
 ];
 
 const TONE_BY_TIPO: Record<TipoTransaccion, 'copper' | 'sage' | 'brick'> = {
   VENTA: 'copper',
   ABONO: 'sage',
+  ANTICIPO: 'sage',
   GASTO: 'brick',
 };
 
@@ -86,9 +89,9 @@ export default function Transactions() {
   const [seleccionada, setSeleccionada] = useState<Transaccion | null>(null);
 
   // Eliminar una venta solo lo puede hacer ADMIN (misma regla que en
-  // Ventas); abonos y gastos los puede corregir tambien Contabilidad.
-  function puedeEliminar(t: Transaccion) {
-    return t.tipo === 'VENTA' ? role === 'ADMIN' : role === 'ADMIN' || role === 'CONTABILIDAD';
+  // Ventas); abonos, anticipos y gastos tambien son solo de ADMIN.
+  function puedeEliminar(_t: Transaccion) {
+    return role === 'ADMIN';
   }
 
   function aplicarPreset(id: PresetId) {

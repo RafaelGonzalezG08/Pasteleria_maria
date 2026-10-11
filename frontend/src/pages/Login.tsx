@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Gem, Loader2 } from 'lucide-react';
+import { CakeSlice, Loader2 } from 'lucide-react';
 import { authApi } from '../api/auth.api';
 import { useAuthStore } from '../store/auth.store';
 import {
@@ -16,9 +16,9 @@ function Encabezado({ subtitulo }: { subtitulo: string }) {
   return (
     <div className="mb-8 flex flex-col items-center text-center">
       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-copper-400 to-copper-600 shadow-neu-sm">
-        <Gem size={24} className="text-white" />
+        <CakeSlice size={24} className="text-white" />
       </div>
-      <h1 className="font-display text-xl font-bold text-ink">Cafe Shopping</h1>
+      <h1 className="font-display text-xl font-bold text-ink">Pastelería María</h1>
       <p className="mt-1 text-sm text-muted">{subtitulo}</p>
     </div>
   );

@@ -16,7 +16,7 @@ import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
  * en el disco de la PC en texto plano.
  */
 
-const PREFIJO = 'cafe-shopping:borrador:';
+const PREFIJO = 'pasteleria-maria:borrador:';
 const BORRADOR_TTL_MS = 12 * 60 * 60 * 1000;
 
 interface Guardado<T> {

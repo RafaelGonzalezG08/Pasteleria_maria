@@ -1,12 +1,21 @@
 import { useQuery } from '@tanstack/react-query';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { Download } from 'lucide-react';
-import { reportsApi, type SalesPeriod, type ExpensesReport, type Cashflow } from '../../api/reports.api';
+import {
+  reportsApi,
+  type SalesPeriod,
+  type ExpensesReport,
+  type Cashflow,
+  type TopProducto,
+  type MermasReport,
+  type CuentasPorCobrar,
+} from '../../api/reports.api';
+import { insumosApi } from '../../api/inventario.api';
 import { usePersistedState } from '../../lib/usePersistedState';
 import { useTheme } from '../../lib/useTheme';
-import { formatMoney, formatDate, ESTADO_DEUDA_LABEL } from '../../lib/format';
+import { formatMoney, formatDate, formatCantidad, ESTADO_DEUDA_LABEL, ESTADO_ENCARGO_LABEL } from '../../lib/format';
 import { Button, Card, PageHeader, Badge, EmptyState } from '../../components/ui';
-import type { ClientDebt } from '../../types';
+import type { AlertasInventario, CostsReport } from '../../types';
 
 /** yyyy-mm-dd en hora LOCAL (no toISOString: eso pasa a UTC y en RD -4 puede
  * adelantar la fecha un dia). Los <input type="date"> esperan este formato. */
@@ -77,9 +86,27 @@ export default function Reports() {
     queryFn: () => reportsApi.sales({ ...params, group }),
   });
 
-  const { data: debts = [] } = useQuery<ClientDebt[]>({
-    queryKey: ['reports', 'debts'],
-    queryFn: () => reportsApi.debts(),
+  const { data: cxc } = useQuery<CuentasPorCobrar>({
+    queryKey: ['reports', 'cuentas-por-cobrar'],
+    queryFn: () => reportsApi.cuentasPorCobrar(),
+  });
+  const debts = cxc?.creditos ?? [];
+
+  const { data: top = [] } = useQuery<TopProducto[]>({
+    queryKey: ['reports', 'top', from, to],
+    queryFn: () => reportsApi.topProductos(params),
+  });
+  const { data: costos } = useQuery<CostsReport>({
+    queryKey: ['reports', 'costs', from, to],
+    queryFn: () => reportsApi.costs(params),
+  });
+  const { data: mermas } = useQuery<MermasReport>({
+    queryKey: ['reports', 'mermas', from, to],
+    queryFn: () => reportsApi.mermas(params),
+  });
+  const { data: alertas } = useQuery<AlertasInventario>({
+    queryKey: ['alertas-inventario'],
+    queryFn: () => insumosApi.alertas(),
   });
 
   const { data: expensesReport } = useQuery<ExpensesReport>({
@@ -232,11 +259,143 @@ export default function Reports() {
         )}
       </Card>
 
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card className="p-4">
+          <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-muted">
+            Productos mas vendidos
+          </h2>
+          {top.length === 0 ? (
+            <p className="text-sm text-muted">Sin ventas de productos en este rango.</p>
+          ) : (
+            <div className="max-h-80 divide-y divide-porcelain-200 overflow-y-auto pr-1">
+              {top.map((p, i) => (
+                <div key={p.productId} className="flex items-center justify-between py-2 text-sm">
+                  <span className="text-ink">
+                    <span className="mr-2 text-muted">{i + 1}.</span>
+                    {p.nombre}
+                  </span>
+                  <span className="text-right">
+                    <span className="font-display font-semibold tabular-nums text-ink">{p.unidades} u.</span>
+                    <span className="block text-xs tabular-nums text-muted">{formatMoney(p.ingresos)}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        <Card className="p-4">
+          <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-muted">
+            Ganancia estimada (venta − costo de receta)
+          </h2>
+          {!costos || costos.productos.length === 0 ? (
+            <p className="text-sm text-muted">Sin ventas en este rango.</p>
+          ) : (
+            <>
+              <div className="mb-3 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg p-2 shadow-neu-inset">
+                  <p className="text-[11px] uppercase text-muted">Vendido</p>
+                  <p className="font-display font-bold tabular-nums text-ink">{formatMoney(costos.totales.ingresos)}</p>
+                </div>
+                <div className="rounded-lg p-2 shadow-neu-inset">
+                  <p className="text-[11px] uppercase text-muted">Costo</p>
+                  <p className="font-display font-bold tabular-nums text-ink">{formatMoney(costos.totales.costo)}</p>
+                </div>
+                <div className="rounded-lg p-2 shadow-neu-inset">
+                  <p className="text-[11px] uppercase text-muted">Ganancia</p>
+                  <p className="font-display font-bold tabular-nums text-sage-600">{formatMoney(costos.totales.utilidad)}</p>
+                  <p className="text-[11px] text-muted">{costos.totales.margenPct}%</p>
+                </div>
+              </div>
+              <div className="max-h-56 divide-y divide-porcelain-200 overflow-y-auto pr-1">
+                {costos.productos.slice(0, 15).map((p) => (
+                  <div key={p.productId ?? p.nombre} className="flex items-center justify-between py-1.5 text-sm">
+                    <span className="truncate text-ink">{p.nombre}</span>
+                    <span className="shrink-0 tabular-nums text-ink">
+                      {formatMoney(p.utilidad)} <span className="text-xs text-muted">({p.margenPct}%)</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </Card>
+
+        <Card className="p-4">
+          <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-muted">
+            Mermas {mermas ? `· ${formatMoney(mermas.totales.total)}` : ''}
+          </h2>
+          {!mermas || mermas.insumos.length + mermas.productos.length === 0 ? (
+            <p className="text-sm text-muted">Sin mermas en este rango.</p>
+          ) : (
+            <div className="max-h-80 divide-y divide-porcelain-200 overflow-y-auto pr-1">
+              {[...mermas.insumos, ...mermas.productos]
+                .sort((a, b) => b.fecha.localeCompare(a.fecha))
+                .map((m) => (
+                  <div key={m.id} className="flex items-center justify-between gap-2 py-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate text-ink">
+                        {m.nombre} <span className="text-muted">({formatCantidad(m.cantidad)} {m.unidad})</span>
+                      </p>
+                      <p className="truncate text-xs text-muted">
+                        {formatDate(m.fecha)}
+                        {m.motivo ? ` · ${m.motivo}` : ''}
+                      </p>
+                    </div>
+                    <span className="shrink-0 font-display font-semibold tabular-nums text-brick-600">{formatMoney(m.costo)}</span>
+                  </div>
+                ))}
+            </div>
+          )}
+        </Card>
+
+        <Card className="p-4">
+          <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-muted">Insumos por agotarse</h2>
+          {!alertas || alertas.bajos.length === 0 ? (
+            <p className="text-sm text-muted">Todos los insumos estan sobre su minimo.</p>
+          ) : (
+            <div className="max-h-80 divide-y divide-porcelain-200 overflow-y-auto pr-1">
+              {alertas.bajos.map((b) => (
+                <div key={b.id} className="flex items-center justify-between py-2 text-sm">
+                  <span className="text-ink">{b.nombre}</span>
+                  <span className="tabular-nums text-brick-600">
+                    {formatCantidad(b.stockActual)} / {formatCantidad(b.stockMinimo)} {b.unidad}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card className="p-4">
           <h2 className="mb-3 font-display text-sm font-bold uppercase tracking-wide text-muted">
-            Clientes con deudas
+            Cuentas por cobrar {cxc ? `· ${formatMoney(cxc.totales.total)}` : ''}
           </h2>
+          {cxc && cxc.encargos.length > 0 && (
+            <>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-copper-700">
+                Saldos de encargos · {formatMoney(cxc.totales.encargos)}
+              </p>
+              <div className="mb-3 max-h-56 divide-y divide-porcelain-200 overflow-y-auto pr-1">
+                {cxc.encargos.map((e) => (
+                  <div key={e.id} className="flex items-center justify-between py-2 text-sm">
+                    <div>
+                      <p className="text-ink">{e.cliente}</p>
+                      <p className="text-xs text-muted">
+                        {e.codigo} · entrega {formatDate(e.fechaEntrega)} · {ESTADO_ENCARGO_LABEL[e.estado]}
+                      </p>
+                    </div>
+                    <p className="font-display font-semibold tabular-nums text-ink">{formatMoney(e.saldo)}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-copper-700">
+                Ventas a credito · {formatMoney(cxc.totales.creditos)}
+              </p>
+            </>
+          )}
           {debts.length === 0 ? (
             <p className="text-sm text-muted">No hay deudas pendientes.</p>
           ) : (

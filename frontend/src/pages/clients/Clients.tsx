@@ -1,15 +1,16 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Plus, Search, Phone, Mail, X, Trash2, Loader2, Check, Download, ChevronRight } from 'lucide-react';
-import { clientsApi } from '../../api/clients.api';
+import { Plus, Search, Phone, Mail, X, Trash2, Loader2, Check, Download, ChevronRight, Gift, MapPin, Pencil } from 'lucide-react';
+import { clientsApi, type ClientePayload } from '../../api/clients.api';
 import { usePersistedState, limpiarBorrador } from '../../lib/usePersistedState';
-import { formatMoney, formatDate, ESTADO_DEUDA_LABEL, METODO_PAGO_LABEL } from '../../lib/format';
-import { Button, Card, PageHeader, Badge, EmptyState, Skeleton } from '../../components/ui';
+import { formatMoney, formatDate, ESTADO_DEUDA_LABEL, ESTADO_ENCARGO_LABEL, METODO_PAGO_LABEL } from '../../lib/format';
+import { Button, Card, PageHeader, Badge, EmptyState, Field, INPUT, Modal, Skeleton } from '../../components/ui';
 import { DebtDetailModal } from '../../components/DebtDetailModal';
 import { SaleDetailModal } from '../../components/SaleDetailModal';
 import { useAuthStore } from '../../store/auth.store';
-import type { Client, ClientDebt } from '../../types';
+import { Link } from 'react-router-dom';
+import type { Client, ClientDebt, FechaEspecial } from '../../types';
 
 export default function Clients() {
   const queryClient = useQueryClient();
@@ -65,7 +66,7 @@ export default function Clients() {
   });
 
   const createClient = useMutation({
-    mutationFn: (payload: Partial<Client>) => clientsApi.create(payload),
+    mutationFn: (payload: ClientePayload) => clientsApi.create(payload),
     onSuccess: () => {
       toast.success('Cliente creado.');
       queryClient.invalidateQueries({ queryKey: ['clients'] });
@@ -180,7 +181,11 @@ export default function Clients() {
       )}
 
       {showForm && (
-        <NewClientModal onClose={() => setShowForm(false)} onSubmit={(payload) => createClient.mutate(payload)} />
+        <ClienteFormModal
+          onClose={() => setShowForm(false)}
+          onSubmit={(payload) => createClient.mutate(payload)}
+          pendiente={createClient.isPending}
+        />
       )}
 
       {selectedClient && <ClientDetailModal client={selectedClient} onClose={() => setSelectedId(null)} />}
@@ -200,6 +205,16 @@ function ClientDetailModal({ client, onClose }: { client: Client; onClose: () =>
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
   const [selectedDebt, setSelectedDebt] = useState<ClientDebt | null>(null);
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
+  const [editando, setEditando] = useState(false);
+
+  const actualizar = useMutation({
+    mutationFn: (payload: ClientePayload) => clientsApi.update(client.id, payload),
+    onSuccess: () => {
+      toast.success('Cliente actualizado.');
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      setEditando(false);
+    },
+  });
 
   // Borrar un cliente es solo de ADMIN (@Roles(Role.ADMIN) en
   // clients.controller.ts). El backend ademas se niega si el cliente ya tiene
@@ -223,6 +238,17 @@ function ClientDetailModal({ client, onClose }: { client: Client; onClose: () =>
 
   const pendingDebts = (client.debts ?? []).filter((d) => d.status !== 'PAGADA');
 
+  if (editando) {
+    return (
+      <ClienteFormModal
+        cliente={client}
+        onClose={() => setEditando(false)}
+        onSubmit={(payload) => actualizar.mutate(payload)}
+        pendiente={actualizar.isPending}
+      />
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-espresso-950/50 p-4">
       {/* El scroll va en el div de adentro, no en el Card: Chrome no recorta
@@ -241,10 +267,33 @@ function ClientDetailModal({ client, onClose }: { client: Client; onClose: () =>
                 <Mail size={13} /> {client.email}
               </p>
             )}
+            {client.direccion && (
+              <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted">
+                <MapPin size={13} /> {client.direccion}
+              </p>
+            )}
+            {client.cumpleanos && (
+              <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted">
+                <Gift size={13} /> Cumpleaños:{' '}
+                {new Date(client.cumpleanos).toLocaleDateString('es-DO', { day: 'numeric', month: 'long' })}
+              </p>
+            )}
+            {(client.fechasEspeciales ?? []).map((f) => (
+              <p key={f.descripcion + f.fecha} className="mt-0.5 flex items-center gap-1.5 text-sm text-muted">
+                <Gift size={13} /> {f.descripcion}:{' '}
+                {new Date(`${f.fecha}T12:00:00`).toLocaleDateString('es-DO', { day: 'numeric', month: 'long' })}
+              </p>
+            ))}
+            {client.notas && <p className="mt-1 text-xs text-muted">{client.notas}</p>}
           </div>
-          <button onClick={onClose} className="rounded p-1 text-muted hover:bg-porcelain-200">
-            <X size={18} />
-          </button>
+          <div className="flex shrink-0 items-start gap-1">
+            <button onClick={() => setEditando(true)} className="rounded p-1 text-muted hover:bg-porcelain-200" title="Editar cliente">
+              <Pencil size={16} />
+            </button>
+            <button onClick={onClose} className="rounded p-1 text-muted hover:bg-porcelain-200">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="space-y-4 p-5">
@@ -283,6 +332,34 @@ function ClientDetailModal({ client, onClose }: { client: Client; onClose: () =>
               </div>
             </div>
           )}
+
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Encargos</h3>
+            {!client.encargos || client.encargos.length === 0 ? (
+              <p className="text-sm text-muted">Sin encargos.</p>
+            ) : (
+              <div className="divide-y divide-porcelain-200 rounded-lg border border-porcelain-200">
+                {client.encargos.map((e) => (
+                  <Link
+                    key={e.id}
+                    to={`/encargos?id=${e.id}`}
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition-colors hover:bg-porcelain-100"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-ink">
+                        {formatDate(e.fechaEntrega)} · {e.items.map((i) => `${i.cantidad} × ${i.descripcion}`).join(', ')}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {e.codigo} · {ESTADO_ENCARGO_LABEL[e.estado]}
+                        {e.saldo > 0 && e.estado !== 'CANCELADO' ? ` · saldo ${formatMoney(e.saldo)}` : ''}
+                      </p>
+                    </div>
+                    <span className="shrink-0 font-display font-semibold tabular-nums text-ink">{formatMoney(e.total)}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Historial de compras</h3>
@@ -357,19 +434,31 @@ function ClientDetailModal({ client, onClose }: { client: Client; onClose: () =>
   );
 }
 
-function NewClientModal({
+/**
+ * Alta y edicion de cliente. Ademas de los datos de contacto guarda el
+ * cumpleaños y otras fechas especiales: el Dashboard avisa unos dias antes
+ * para ofrecerles su pastel a tiempo.
+ */
+function ClienteFormModal({
+  cliente,
   onClose,
   onSubmit,
+  pendiente,
 }: {
+  cliente?: Client;
   onClose: () => void;
-  onSubmit: (payload: Partial<Client>) => void;
+  onSubmit: (payload: ClientePayload) => void;
+  pendiente: boolean;
 }) {
-  // El cliente a medio escribir sobrevive si se cierra el modal sin querer.
-  const [form, setForm] = usePersistedState('clientes:nuevo', {
-    nombre: '',
-    telefono: '',
-    email: '',
-    direccion: '',
+  // El cliente nuevo a medio escribir sobrevive si se cierra el modal sin querer.
+  const [form, setForm] = usePersistedState(cliente ? `clientes:editar:${cliente.id}` : 'clientes:nuevo', {
+    nombre: cliente?.nombre ?? '',
+    telefono: cliente?.telefono ?? '',
+    email: cliente?.email ?? '',
+    direccion: cliente?.direccion ?? '',
+    notas: cliente?.notas ?? '',
+    cumpleanos: cliente?.cumpleanos ? cliente.cumpleanos.slice(0, 10) : '',
+    fechasEspeciales: (cliente?.fechasEspeciales ?? []) as FechaEspecial[],
   });
 
   function handleSubmit(e: FormEvent) {
@@ -378,50 +467,98 @@ function NewClientModal({
       toast.error('Nombre y telefono son obligatorios.');
       return;
     }
-    // Si el correo o la direccion quedan en blanco no se envian (en vez de
-    // mandar "" o "N/A"), asi el backend los trata como realmente opcionales.
+    // Lo que queda en blanco no se envia (en vez de "" o "N/A"), asi el
+    // backend lo trata como realmente opcional.
     onSubmit({
       nombre: form.nombre.trim(),
       telefono: form.telefono.trim(),
       email: form.email.trim() || undefined,
       direccion: form.direccion.trim() || undefined,
+      notas: form.notas.trim() || undefined,
+      cumpleanos: form.cumpleanos || null,
+      fechasEspeciales: form.fechasEspeciales.filter((f) => f.descripcion.trim() && f.fecha),
     });
+    if (cliente) limpiarBorrador(`clientes:editar:${cliente.id}`);
   }
 
+  const set = (campo: 'nombre' | 'telefono' | 'email' | 'direccion' | 'notas' | 'cumpleanos') => (e: { target: { value: string } }) =>
+    setForm((f) => ({ ...f, [campo]: e.target.value }));
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-espresso-950/50 p-4">
-      {/* El scroll va en el div de adentro, no en el Card: Chrome no recorta
-          la barra de scroll a las esquinas redondeadas cuando overflow y
-          border-radius estan en el mismo elemento. */}
-      <Card className="max-h-[90vh] w-full max-w-sm overflow-hidden">
-        <div className="max-h-[90vh] overflow-y-auto p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display font-bold text-ink">Nuevo cliente</h2>
-          <button onClick={onClose} className="rounded p-1 text-muted hover:bg-porcelain-200">
-            <X size={18} />
-          </button>
+    <Modal titulo={cliente ? 'Editar cliente' : 'Nuevo cliente'} onClose={onClose} ancho="max-w-md">
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <Field label="Nombre *">
+          <input value={form.nombre} onChange={set('nombre')} className={INPUT} autoFocus />
+        </Field>
+        <Field label="Telefono *">
+          <input value={form.telefono} onChange={set('telefono')} placeholder="+18095551234" className={INPUT} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Correo">
+            <input value={form.email} onChange={set('email')} placeholder="Opcional" className={INPUT} />
+          </Field>
+          <Field label="Cumpleaños" ayuda="Si no sabes el año, usa 2000.">
+            <input type="date" value={form.cumpleanos} onChange={set('cumpleanos')} className={INPUT} />
+          </Field>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {(['nombre', 'telefono', 'email', 'direccion'] as const).map((field) => (
-            <div key={field}>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">
-                {field}
-                {(field === 'nombre' || field === 'telefono') && ' *'}
-              </label>
-              <input
-                value={form[field]}
-                onChange={(e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))}
-                placeholder={field === 'email' ? 'Opcional' : field === 'direccion' ? 'Opcional' : undefined}
-                className="w-full rounded-lg border border-porcelain-300 px-3 py-2 text-sm outline-none focus:border-copper-500"
-              />
-            </div>
-          ))}
-          <Button type="submit" className="w-full">
-            Guardar cliente
+        <Field label="Direccion">
+          <input value={form.direccion} onChange={set('direccion')} placeholder="Para entregas a domicilio" className={INPUT} />
+        </Field>
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">Fechas especiales</p>
+          <div className="space-y-2">
+            {form.fechasEspeciales.map((f, i) => (
+              <div key={i} className="grid grid-cols-[1fr_150px_auto] gap-2">
+                <input
+                  value={f.descripcion}
+                  onChange={(e) =>
+                    setForm((x) => ({
+                      ...x,
+                      fechasEspeciales: x.fechasEspeciales.map((y, j) => (j === i ? { ...y, descripcion: e.target.value } : y)),
+                    }))
+                  }
+                  placeholder="Aniversario, cumpleaños de la hija..."
+                  className="rounded-lg px-2.5 py-1.5 text-sm"
+                />
+                <input
+                  type="date"
+                  value={f.fecha}
+                  onChange={(e) =>
+                    setForm((x) => ({
+                      ...x,
+                      fechasEspeciales: x.fechasEspeciales.map((y, j) => (j === i ? { ...y, fecha: e.target.value } : y)),
+                    }))
+                  }
+                  className="rounded-lg px-2.5 py-1.5 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setForm((x) => ({ ...x, fechasEspeciales: x.fechasEspeciales.filter((_, j) => j !== i) }))}
+                  className="rounded p-1 text-muted hover:text-brick-600"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            ))}
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="mt-2"
+            onClick={() => setForm((x) => ({ ...x, fechasEspeciales: [...x.fechasEspeciales, { descripcion: '', fecha: '' }] }))}
+          >
+            <Plus size={14} /> Agregar fecha
           </Button>
-        </form>
         </div>
-      </Card>
-    </div>
+        <Field label="Notas">
+          <textarea value={form.notas} onChange={set('notas')} rows={2} placeholder="Gustos, alergias..." className={INPUT} />
+        </Field>
+        <Button type="submit" className="w-full" disabled={pendiente}>
+          {pendiente && <Loader2 size={16} className="animate-spin" />}
+          Guardar cliente
+        </Button>
+      </form>
+    </Modal>
   );
 }

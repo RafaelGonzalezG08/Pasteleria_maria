@@ -8,9 +8,9 @@
 export const MINUTOS_INACTIVIDAD = 30;
 const LIMITE_MS = MINUTOS_INACTIVIDAD * 60_000;
 
-const CLAVE_ULTIMO_CORREO = 'cafe-shopping-ultimo-correo';
-const CLAVE_ACTIVIDAD = 'cafe-shopping-actividad';
-const CLAVE_EXPIRADA = 'cafe-shopping-sesion-expirada';
+const CLAVE_ULTIMO_CORREO = 'pasteleria-maria-ultimo-correo';
+const CLAVE_ACTIVIDAD = 'pasteleria-maria-actividad';
+const CLAVE_EXPIRADA = 'pasteleria-maria-sesion-expirada';
 
 /** true si pasaron al menos 30 minutos desde `ultima` (null = sin registro). */
 export function inactividadSuperada(

@@ -1,4 +1,10 @@
-export type Role = 'ADMIN' | 'CAJERO' | 'CONTABILIDAD';
+export type Role = 'ADMIN' | 'CAJERO' | 'REPOSTERO';
+
+export const ROLE_LABEL: Record<Role, string> = {
+  ADMIN: 'Administrador',
+  CAJERO: 'Cajero',
+  REPOSTERO: 'Repostero',
+};
 
 export type MetodoPago = 'EFECTIVO' | 'TARJETA' | 'TRANSFERENCIA' | 'CREDITO' | 'OTRO';
 
@@ -6,21 +12,16 @@ export type EstadoFactura = 'PENDIENTE' | 'GENERADA' | 'ENVIADA' | 'ERROR';
 
 export type EstadoDeuda = 'PENDIENTE' | 'PARCIAL' | 'PAGADA' | 'VENCIDA';
 
-export type Material = 'PLATA' | 'ORO' | 'GOLDFILLED' | 'ACERO' | 'OTRO';
-
-export const MATERIAL_LABEL: Record<Material, string> = {
-  PLATA: 'Plata',
-  ORO: 'Oro',
-  GOLDFILLED: 'Gold filled',
-  ACERO: 'Acero',
-  OTRO: 'Otro',
-};
-
 export interface AuthUser {
   id: string;
   nombre: string;
   email: string;
   role: Role;
+}
+
+export interface FechaEspecial {
+  descripcion: string;
+  fecha: string;
 }
 
 export interface Client {
@@ -30,10 +31,33 @@ export interface Client {
   email?: string | null;
   direccion?: string | null;
   notas?: string | null;
+  cumpleanos?: string | null;
+  fechasEspeciales?: FechaEspecial[];
   createdAt: string;
   deudaPendiente?: number;
   debts?: ClientDebt[];
   sales?: Sale[];
+  encargos?: EncargoResumenCliente[];
+}
+
+export interface EncargoResumenCliente {
+  id: string;
+  codigo: string;
+  fechaEntrega: string;
+  estado: EstadoEncargo;
+  total: number;
+  abonado: number;
+  saldo: number;
+  items: { descripcion: string; cantidad: number }[];
+}
+
+export interface ProximaFecha {
+  clientId: string;
+  nombre: string;
+  telefono: string;
+  descripcion: string;
+  fecha: string;
+  enDias: number;
 }
 
 export interface Product {
@@ -43,13 +67,13 @@ export interface Product {
   precioUnitario: number;
   // Solo presente cuando el backend responde a un usuario ADMIN.
   costoUnitario?: number;
-  material: Material;
   stock: number;
-  /** Tallas / medidas que ofrece la pieza. Vacio = no maneja tallas. */
-  tallas: string[];
   imageUrl?: string | null;
+  descripcion?: string | null;
   activo: boolean;
   categoriaId?: string | null;
+  categoria?: { id: string; nombre: string } | null;
+  receta?: { id: string; nombre: string } | null;
 }
 
 export interface Category {
@@ -118,6 +142,7 @@ export interface Sale {
   items: SaleItem[];
   invoice?: Invoice | null;
   payments?: Payment[];
+  encargo?: { id: string; codigo: string } | null;
 }
 
 export interface ClientDebt {
@@ -142,61 +167,316 @@ export interface ClientDebt {
   status: EstadoDeuda;
 }
 
-export type EstadoPedido = 'PENDIENTE' | 'EMPACADO' | 'ENTREGADO';
+// ---------- Inventario ----------
 
-/** Que tan urgente es la entrega. Lo calcula el backend con la fecha del negocio. */
-export type UrgenciaPedido = 'ATRASADO' | 'HOY' | 'PROXIMO' | 'SIN_FECHA';
+export type TipoInsumo = 'INGREDIENTE' | 'MATERIAL';
+export type TipoMovimiento = 'ENTRADA' | 'SALIDA' | 'AJUSTE' | 'MERMA' | 'COMPRA' | 'PRODUCCION';
 
-export interface Order {
+export interface Insumo {
   id: string;
-  saleId: string;
-  estado: EstadoPedido;
-  fechaEntrega?: string | null;
+  nombre: string;
+  tipo: TipoInsumo;
+  unidad: string;
+  unidadNombre?: string;
+  stockActual: number;
+  stockMinimo: number;
+  /** Solo ADMIN. */
+  costoUnitario?: number;
+  valorStock?: number;
+  proveedorId?: string | null;
+  proveedor?: { id: string; nombre: string } | null;
   notas?: string | null;
-  urgencia: UrgenciaPedido;
-  createdAt: string;
-  sale?: {
-    id: string;
-    fecha: string;
-    total: number;
-    metodoPago: MetodoPago;
-    client?: { id: string; nombre: string; telefono: string } | null;
-    items: { id: string; descripcion: string; cantidad: number }[];
-    invoice?: { numero: string; pngUrl?: string | null; estado: EstadoFactura } | null;
-  };
+  activo: boolean;
+  proximoVencimiento?: string | null;
+  bajoMinimo?: boolean;
+  porVencer?: boolean;
+  vencido?: boolean;
 }
 
-export type EstadoPedidoWeb = 'PENDIENTE' | 'ATENDIDO' | 'CANCELADO';
+export interface LoteInsumo {
+  id: string;
+  cantidadInicial: number;
+  cantidadRestante: number;
+  costoUnitario?: number;
+  fechaVencimiento?: string | null;
+  fechaEntrada: string;
+}
 
-export interface WebOrderItem {
+export interface MovimientoInsumo {
+  id: string;
+  insumoId: string;
+  tipo: TipoMovimiento;
   cantidad: number;
+  costoUnitario?: number;
+  stockResultante: number;
+  motivo?: string | null;
+  fecha: string;
+  user?: { nombre: string } | null;
+  insumo?: { id: string; nombre: string; unidad: string };
+}
+
+export interface InsumoDetalle extends Insumo {
+  lotes: LoteInsumo[];
+  movimientos: MovimientoInsumo[];
+  usadoEnRecetas: { id: string; nombre: string }[];
+}
+
+export interface AlertasInventario {
+  bajos: { id: string; nombre: string; unidad: string; stockActual: number; stockMinimo: number; faltante: number }[];
+  porVencer: {
+    loteId: string;
+    insumoId: string;
+    nombre: string;
+    unidad: string;
+    cantidad: number;
+    fechaVencimiento: string;
+    vencido: boolean;
+  }[];
+}
+
+// ---------- Recetas ----------
+
+export interface RecetaResumen {
+  id: string;
   nombre: string;
-  sku: string | null;
-  /** Precio de la linea completa (cantidad x unitario). */
+  esSubreceta: boolean;
+  rendimiento: number;
+  unidadRendimiento: string;
+  porciones?: number | null;
+  tiempoPreparacionMin?: number | null;
+  activo: boolean;
+  producto?: { id: string; nombre: string; precioUnitario: number; stock: number } | null;
+  totalIngredientes: number;
+  usadaEnRecetas: number;
+  costoTotal?: number | null;
+  costoPorUnidad?: number | null;
+  costoPorPorcion?: number | null;
+  precioSugeridoUnidad?: number | null;
+  errorCosto?: string | null;
+}
+
+export interface IngredienteReceta {
+  id: string;
+  insumoId?: string | null;
+  subrecetaId?: string | null;
+  cantidad: number;
+  unidad: string;
+  orden: number;
+  insumo?: { id: string; nombre: string; unidad: string; stockActual: number } | null;
+  subreceta?: { id: string; nombre: string; unidadRendimiento: string } | null;
+  costo?: number;
+}
+
+export interface Costeo {
+  costoTotal: number;
+  costoPorUnidad: number;
+  costoPorPorcion: number;
+  margenPct: number;
+  precioSugeridoUnidad: number;
+  precioSugeridoPorcion: number;
+}
+
+export interface RecetaDetalle {
+  id: string;
+  nombre: string;
+  esSubreceta: boolean;
+  rendimiento: number;
+  unidadRendimiento: string;
+  porciones?: number | null;
+  tiempoPreparacionMin?: number | null;
+  pasos?: string | null;
+  margenPct?: number | null;
+  productoId?: string | null;
+  activo: boolean;
+  producto?: { id: string; nombre: string; precioUnitario: number; stock: number } | null;
+  unidadesPorTanda?: number | null;
+  ingredientes: IngredienteReceta[];
+  usadaEn: { id: string; nombre: string }[];
+  /** Solo ADMIN. */
+  costeo?: Costeo;
+}
+
+export interface RecetaEscalada {
+  factor: number;
+  rendimiento: number;
+  unidadRendimiento: string;
+  porciones: number | null;
+  costoTotal?: number;
+  lineas: { id: string; tipo: 'INSUMO' | 'SUBRECETA'; refId: string; nombre: string; cantidad: number; unidad: string; costo?: number }[];
+  insumos: { insumoId: string; nombre: string; unidad: string; necesario: number; disponible: number; faltante: number }[];
+}
+
+// ---------- Produccion ----------
+
+export interface Produccion {
+  id: string;
+  fecha: string;
+  recetaId: string;
+  tandas: number;
+  unidadesProducidas: number;
+  costoTotal?: number;
+  notas?: string | null;
+  receta: { id: string; nombre: string; unidadRendimiento: string };
+  producto?: { id: string; nombre: string } | null;
+  user?: { nombre: string } | null;
+}
+
+export interface ProductoAPreparar {
+  productId: string;
+  nombre: string;
+  cantidad: number;
+  stock: number;
+  faltante: number;
+  tandasSugeridas: number;
+  receta: { id: string; nombre: string; unidadesPorTanda: number | null } | null;
+}
+
+export interface HojaProduccion {
+  fecha: string;
+  productos: ProductoAPreparar[];
+  encargos: {
+    id: string;
+    codigo: string;
+    estado: EstadoEncargo;
+    fechaEntrega: string;
+    tipoEntrega: TipoEntrega;
+    cliente: { id: string; nombre: string; telefono: string };
+    notas?: string | null;
+    items: (Personalizacion & { id: string; descripcion: string; cantidad: number; productId?: string | null })[];
+  }[];
+}
+
+export interface ListaCompras {
+  dias: number;
+  desde: string;
+  hasta: string;
+  encargosConsiderados: number;
+  productos: ProductoAPreparar[];
+  productosSinReceta: string[];
+  insumos: {
+    insumoId: string;
+    nombre: string;
+    unidad: string;
+    necesarioEncargos: number;
+    disponible: number;
+    stockMinimo: number;
+    aComprar: number;
+    costoEstimado?: number;
+    proveedor?: { id: string; nombre: string; telefono?: string | null } | null;
+    motivo: 'ENCARGOS' | 'MINIMO' | null;
+  }[];
+  costoEstimadoTotal?: number;
+}
+
+// ---------- Proveedores y compras ----------
+
+export interface Proveedor {
+  id: string;
+  nombre: string;
+  contacto?: string | null;
+  telefono?: string | null;
+  email?: string | null;
+  direccion?: string | null;
+  notas?: string | null;
+  activo: boolean;
+  totalInsumos?: number;
+  totalCompras?: number;
+  ultimaCompra?: string | null;
+}
+
+export interface Compra {
+  id: string;
+  fecha: string;
+  proveedor?: { id: string; nombre: string } | null;
+  numeroFactura?: string | null;
+  total: number;
+  notas?: string | null;
+  totalLineas?: number;
+  user?: { nombre: string } | null;
+  items?: {
+    id: string;
+    cantidad: number;
+    unidad: string;
+    costoTotal: number;
+    costoUnitario: number;
+    fechaVencimiento?: string | null;
+    insumo: { id: string; nombre: string; unidad: string };
+  }[];
+}
+
+// ---------- Encargos ----------
+
+export type EstadoEncargo = 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO' | 'ENTREGADO' | 'CANCELADO';
+export type TipoEntrega = 'DOMICILIO' | 'RETIRO';
+export type UrgenciaEncargo = 'ATRASADO' | 'HOY' | 'PRONTO' | 'PROGRAMADO' | 'CERRADO';
+
+export interface Personalizacion {
+  tamano?: string | null;
+  sabor?: string | null;
+  relleno?: string | null;
+  decoracion?: string | null;
+  mensaje?: string | null;
+  fotoReferenciaUrl?: string | null;
+}
+
+export interface EncargoItem extends Personalizacion {
+  id: string;
+  productId?: string | null;
+  descripcion: string;
+  cantidad: number;
+  precioUnitario: number;
   total: number;
 }
 
-/** Pedido llegado por el catalogo web, pegando el mensaje de WhatsApp del cliente. */
-export interface WebOrder {
+export interface EncargoPago {
+  id: string;
+  monto: number;
+  metodo: MetodoPago;
+  nota?: string | null;
+  fecha: string;
+  user?: { nombre: string } | null;
+}
+
+export interface Encargo {
   id: string;
   codigo: string;
-  items: WebOrderItem[];
+  clientId: string;
+  client: { id: string; nombre: string; telefono: string; direccion?: string | null };
+  fechaEntrega: string;
+  tipoEntrega: TipoEntrega;
+  direccionEntrega?: string | null;
+  costoEnvio: number;
+  estado: EstadoEncargo;
+  subtotal: number;
+  impuestos: number;
   total: number;
-  estado: EstadoPedidoWeb;
-  textoOriginal: string;
+  tasaImpuesto: number;
+  abonado: number;
+  saldo: number;
   notas?: string | null;
-  saleId?: string | null;
+  motivoCancelacion?: string | null;
+  urgencia: UrgenciaEncargo;
+  items: EncargoItem[];
+  pagos?: EncargoPago[];
+  sale?: { id: string; invoice?: { numero: string; pngUrl?: string | null } | null } | null;
+  user?: { nombre: string } | null;
+  entregadoAt?: string | null;
   createdAt: string;
 }
 
-export interface OrdersSummary {
+export interface ResumenEncargos {
   total: number;
   pendientes: number;
-  empacados: number;
+  enProduccion: number;
+  listos: number;
   atrasados: number;
   paraHoy: number;
-  proximos: Order[];
+  diasAlerta: number;
+  saldoPorCobrar: number;
+  proximos: Encargo[];
 }
+
+// ---------- Gastos, transacciones, dashboard ----------
 
 export interface Expense {
   id: string;
@@ -207,9 +487,9 @@ export interface Expense {
   user?: { nombre: string };
 }
 
-export type TipoTransaccion = 'VENTA' | 'ABONO' | 'GASTO';
+export type TipoTransaccion = 'VENTA' | 'ABONO' | 'ANTICIPO' | 'GASTO';
 
-/** Fila del libro de transacciones (Reportes > Transacciones): venta, abono o gasto. */
+/** Fila del libro de transacciones: venta, abono, anticipo de encargo o gasto. */
 export interface Transaccion {
   id: string;
   tipo: TipoTransaccion;
@@ -235,7 +515,7 @@ export interface DashboardSummary {
   ventasHoy: { total: number; cantidad: number };
   deudaTotalPendiente: number;
   gastosDelMes: number;
-  /** Contado + abonos cobrados - gastos, del mes en curso. */
+  /** Contado + abonos + anticipos cobrados - gastos, del mes en curso. */
   saldoEnCajaMes: number;
   /** Todas las ventas - gastos, del mes en curso. */
   balanceTotalMes: number;
@@ -247,14 +527,13 @@ export interface BusinessProfile {
   nombre: string;
   logoUrl?: string | null;
   direccion?: string | null;
+  telefono?: string | null;
   identifFiscal?: string | null;
+  moneda: string;
+  nombreImpuesto: string;
   tasaImpuesto: number;
-  telefonoWhatsapp?: string | null;
-  descripcionWeb?: string | null;
-  datosPago?: string | null;
-  relevoPedidosUrl?: string | null;
-  relevoPedidosClave?: string | null;
-  cloudflareApiToken?: string | null;
-  cloudflareAccountId?: string | null;
-  cloudflarePagesProject?: string | null;
+  margenGananciaPct: number;
+  diasAlertaEncargos: number;
+  diasAlertaVencimiento: number;
+  diasAlertaCumpleanos: number;
 }

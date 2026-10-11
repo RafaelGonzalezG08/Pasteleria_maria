@@ -9,7 +9,9 @@ export interface BackupContenido {
   facturas: number;
   deudas: number;
   gastos: number;
-  pedidos: number;
+  encargos?: number;
+  insumos?: number;
+  recetas?: number;
   usuarios: number;
 }
 
@@ -42,18 +44,19 @@ export interface AppUser {
   activo: boolean;
 }
 
+/** Formulario de Configuracion: todo como texto; el impuesto en porcentaje (18), no en tasa. */
 export interface BusinessProfileForm {
   nombre: string;
   direccion: string;
+  telefono: string;
   identifFiscal: string;
+  moneda: string;
+  nombreImpuesto: string;
   tasaImpuesto: string;
-  telefonoWhatsapp: string;
-  descripcionWeb: string;
-  relevoPedidosUrl: string;
-  relevoPedidosClave: string;
-  cloudflareApiToken: string;
-  cloudflareAccountId: string;
-  cloudflarePagesProject: string;
+  margenGananciaPct: string;
+  diasAlertaEncargos: string;
+  diasAlertaVencimiento: string;
+  diasAlertaCumpleanos: string;
 }
 
 export interface CrearUsuarioDto {
@@ -63,31 +66,18 @@ export interface CrearUsuarioDto {
   role: Role;
 }
 
-export interface GenerarCatalogoResult {
-  ok: boolean;
-  error?: string;
-  carpeta: string;
-  productos: number;
-  excluidasSinFoto?: number;
-  excluidasSinPrecio?: number;
-  cloudflare?: 'sin-configurar' | 'sin-cambios' | 'publicado' | 'error';
-  cloudflareUrl?: string;
-  cloudflareError?: string;
-}
-
-export interface ImportarProductosResult {
-  total: number;
-  agregados: number;
-  omitidos: number;
-  conFoto: number;
-  renumerados: { nombre: string; skuOriginal: string; skuNuevo: string }[];
-}
-
 export const settingsApi = {
   getBusinessProfile: () => api.get<BusinessProfile>('/settings/business-profile').then((r) => r.data),
   updateBusinessProfile: (form: BusinessProfileForm) =>
     api
-      .put('/settings/business-profile', { ...form, tasaImpuesto: Number(form.tasaImpuesto) })
+      .put('/settings/business-profile', {
+        ...form,
+        tasaImpuesto: (Number(form.tasaImpuesto) || 0) / 100,
+        margenGananciaPct: Number(form.margenGananciaPct) || 0,
+        diasAlertaEncargos: Number(form.diasAlertaEncargos) || 0,
+        diasAlertaVencimiento: Number(form.diasAlertaVencimiento) || 0,
+        diasAlertaCumpleanos: Number(form.diasAlertaCumpleanos) || 0,
+      })
       .then((r) => r.data),
   uploadLogo: (file: File) => {
     const formData = new FormData();
@@ -98,8 +88,6 @@ export const settingsApi = {
   },
   getIntegrationsStatus: () =>
     api.get<IntegrationsStatus>('/settings/integrations-status').then((r) => r.data),
-  getRedLocal: () =>
-    api.get<{ url: string | null; certUrl: string | null }>('/settings/red-local').then((r) => r.data),
 
   getBackupsStatus: () => api.get<BackupsStatus>('/backups').then((r) => r.data),
   runBackup: () => api.post<{ ok: boolean; error?: string }>('/backups/run').then((r) => r.data),
@@ -116,20 +104,10 @@ export const settingsApi = {
   createUser: (payload: CrearUsuarioDto) => api.post('/auth/register', payload).then((r) => r.data),
   toggleUserActive: (id: string, activo: boolean) =>
     api.patch(`/users/${id}/activo`, { activo }, { skipErrorToast: true }).then((r) => r.data),
+  changeUserRole: (id: string, role: Role) =>
+    api.patch(`/users/${id}/role`, { role }, { skipErrorToast: true }).then((r) => r.data),
   changePassword: (passwordActual: string, passwordNueva: string) =>
     api
       .patch('/users/me/password', { passwordActual, passwordNueva }, { skipErrorToast: true })
       .then((r) => r.data),
-
-  generarCatalogo: () =>
-    api.post<GenerarCatalogoResult>('/catalogo/generar', undefined, { skipErrorToast: true }).then((r) => r.data),
-
-  importarProductos: (archivo: File, archivoFotos: File | null) => {
-    const formData = new FormData();
-    formData.append('file', archivo);
-    if (archivoFotos) formData.append('fotos', archivoFotos);
-    return api
-      .post<ImportarProductosResult>('/data-import/productos', formData, { skipErrorToast: true })
-      .then((r) => r.data);
-  },
 };

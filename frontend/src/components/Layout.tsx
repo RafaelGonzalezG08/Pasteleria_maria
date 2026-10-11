@@ -1,17 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
   ShoppingCart,
-  Gem,
+  CakeSlice,
   Users,
   Receipt,
   Wallet,
   BarChart3,
   History,
   PiggyBank,
-  Package,
+  ClipboardList,
   Settings,
   LogOut,
   HandCoins,
@@ -19,15 +19,18 @@ import {
   Sun,
   X,
   Menu,
-  WifiOff,
+  Wheat,
+  ChefHat,
+  Factory,
+  Truck,
 } from 'lucide-react';
 import { useAuthStore } from '../store/auth.store';
 import { api, apiUrl, urlConToken } from '../lib/api';
 import { useTheme } from '../lib/useTheme';
-import { useConexionPc } from '../lib/useConexionPc';
 import { useCierrePorInactividad } from '../lib/useCierrePorInactividad';
 import { Button, Card } from './ui';
-import type { BusinessProfile, Role } from '../types';
+import { setMoneda } from '../lib/format';
+import { ROLE_LABEL, type BusinessProfile, type Role } from '../types';
 
 interface NavItem {
   to: string;
@@ -39,14 +42,18 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/pos', label: 'Punto de venta', icon: ShoppingCart, roles: ['ADMIN', 'CAJERO'] },
-  { to: '/productos', label: 'Productos', icon: Gem, roles: ['ADMIN'] },
-  { to: '/ventas', label: 'Ventas', icon: Receipt },
-  { to: '/pedidos', label: 'Pedidos', icon: Package },
-  { to: '/cobros', label: 'Cobros', icon: HandCoins, roles: ['ADMIN', 'CAJERO', 'CONTABILIDAD'] },
-  { to: '/clientes', label: 'Clientes', icon: Users },
-  { to: '/gastos', label: 'Gastos', icon: Wallet, roles: ['ADMIN', 'CONTABILIDAD'] },
-  { to: '/reportes', label: 'Reportes', icon: BarChart3, roles: ['ADMIN', 'CONTABILIDAD'] },
-  { to: '/transacciones', label: 'Transacciones', icon: History, roles: ['ADMIN', 'CONTABILIDAD'] },
+  { to: '/encargos', label: 'Encargos', icon: ClipboardList },
+  { to: '/productos', label: 'Productos', icon: CakeSlice },
+  { to: '/produccion', label: 'Produccion', icon: Factory, roles: ['ADMIN', 'REPOSTERO'] },
+  { to: '/recetas', label: 'Recetas', icon: ChefHat, roles: ['ADMIN', 'REPOSTERO'] },
+  { to: '/inventario', label: 'Inventario', icon: Wheat, roles: ['ADMIN', 'REPOSTERO'] },
+  { to: '/compras', label: 'Compras', icon: Truck, roles: ['ADMIN'] },
+  { to: '/ventas', label: 'Ventas', icon: Receipt, roles: ['ADMIN', 'CAJERO'] },
+  { to: '/cobros', label: 'Cobros', icon: HandCoins, roles: ['ADMIN', 'CAJERO'] },
+  { to: '/clientes', label: 'Clientes', icon: Users, roles: ['ADMIN', 'CAJERO'] },
+  { to: '/gastos', label: 'Gastos', icon: Wallet, roles: ['ADMIN'] },
+  { to: '/reportes', label: 'Reportes', icon: BarChart3, roles: ['ADMIN'] },
+  { to: '/transacciones', label: 'Transacciones', icon: History, roles: ['ADMIN'] },
   { to: '/costos', label: 'Costos', icon: PiggyBank, roles: ['ADMIN'] },
 ];
 
@@ -57,9 +64,8 @@ export function Layout() {
   const { user, logout } = useAuthStore();
   const { esOscuro, alternar } = useTheme();
   const [confirmandoSalir, setConfirmandoSalir] = useState(false);
-  /** En celular el menu lateral empieza escondido; en PC (md+) siempre se ve, sin importar esto. */
+  /** En ventana angosta el menu lateral empieza escondido; en ancho normal (md+) siempre se ve. */
   const [menuAbierto, setMenuAbierto] = useState(false);
-  const conectado = useConexionPc();
   useCierrePorInactividad();
 
   const { data: profile } = useQuery<BusinessProfile>({
@@ -67,6 +73,9 @@ export function Layout() {
     queryFn: async () => (await api.get('/settings/business-profile')).data,
     staleTime: 60_000,
   });
+
+  // La moneda de Configuracion se aplica a todos los montos de la app.
+  useEffect(() => setMoneda(profile?.moneda), [profile?.moneda]);
 
   const visibleItems = NAV_ITEMS.filter((item) => !item.roles || (user && item.roles.includes(user.role)));
   const puedeVerConfiguracion = Boolean(user && ROLES_CONFIGURACION.includes(user.role));
@@ -76,15 +85,8 @@ export function Layout() {
 
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-porcelain-100">
-      {!conectado && (
-        <div className="flex shrink-0 items-center justify-center gap-2 bg-brick-500 px-3 py-1.5 text-xs font-medium text-white">
-          <WifiOff size={14} />
-          Sin conexión con la PC — reintentando…
-        </div>
-      )}
-
       <div className="flex flex-1 overflow-hidden">
-      {/* Fondo oscuro detras del menu en celular; tocarlo lo cierra. No existe en PC. */}
+      {/* Fondo oscuro detras del menu en ventana angosta; tocarlo lo cierra. */}
       {menuAbierto && (
         <div
           className="fixed inset-0 z-20 bg-espresso-950/50 md:hidden"
@@ -105,15 +107,15 @@ export function Layout() {
             {logoSrc ? (
               <img src={logoSrc} alt="Logo" className="h-full w-full object-cover" />
             ) : (
-              <Gem size={18} strokeWidth={2.25} className="text-white" />
+              <CakeSlice size={18} strokeWidth={2.25} className="text-white" />
             )}
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate font-display text-[15px] font-bold leading-none tracking-tight text-ink">
-              {profile?.nombre || 'Cafe Shopping'}
+              {profile?.nombre || 'Pastelería María'}
             </p>
             <p className="mt-1 font-lema text-[13px] italic leading-none text-copper-600">
-              un placer al comprar
+              hecho con cariño
             </p>
           </div>
           <button
@@ -156,7 +158,7 @@ export function Layout() {
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-ink">{user?.nombre}</p>
-              <p className="truncate text-[11px] uppercase tracking-wide text-muted">{user?.role}</p>
+              <p className="truncate text-[11px] uppercase tracking-wide text-muted">{user ? ROLE_LABEL[user.role] ?? user.role : ''}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -245,7 +247,7 @@ export function Layout() {
             <Menu size={20} />
           </button>
           <p className="truncate font-display text-sm font-bold text-ink">
-            {profile?.nombre || 'Cafe Shopping'}
+            {profile?.nombre || 'Pastelería María'}
           </p>
         </div>
         <div

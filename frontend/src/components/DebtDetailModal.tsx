@@ -4,11 +4,6 @@ import toast from 'react-hot-toast';
 import { X, Banknote, MessageCircle, Loader2, Trash2 } from 'lucide-react';
 import { cobrosApi } from '../api/cobros.api';
 import { salesApi } from '../api/sales.api';
-import {
-  abrirPestanaRespaldoSiHaceFalta,
-  enviarWhatsappDesdeCelular,
-  esEnvioDirecto,
-} from '../lib/whatsappDirecto';
 import { formatMoney, formatDateTime, METODO_PAGO_LABEL } from '../lib/format';
 import { Button, Card, Select, ConfirmPasswordModal, Skeleton } from './ui';
 import { FacturaImagen } from './FacturaImagen';
@@ -26,7 +21,7 @@ export function DebtDetailModal({ debt, onClose }: { debt: ClientDebt; onClose: 
   // Igual que en Transacciones: eliminar un abono es una correccion contable,
   // no una tarea de caja. El backend ya lo rechaza para CAJERO; esto solo
   // evita mostrarle un boton que le va a devolver un error 403.
-  const puedeEliminarAbonos = role === 'ADMIN' || role === 'CONTABILIDAD';
+  const puedeEliminarAbonos = role === 'ADMIN';
   const [amount, setAmount] = useState('');
   const [metodo, setMetodo] = useState<MetodoPago>('EFECTIVO');
   const [imgRefreshKey, setImgRefreshKey] = useState(0);
@@ -249,18 +244,12 @@ function ReminderButton({ debt, className }: { debt: ClientDebt; className: stri
   const queryClient = useQueryClient();
 
   const sendReminder = useMutation({
-    mutationFn: (_pestanaRespaldo: Window | null) => cobrosApi.remind(debt.id),
-    onSuccess: async (resultado, pestanaRespaldo) => {
-      if (esEnvioDirecto(resultado)) {
-        await enviarWhatsappDesdeCelular(resultado, pestanaRespaldo);
-      } else {
-        pestanaRespaldo?.close();
-        toast.success('Recordatorio en cola. Se enviará por WhatsApp en unos segundos.');
-      }
+    mutationFn: () => cobrosApi.remind(debt.id),
+    onSuccess: () => {
+      toast.success('Recordatorio en cola. Se enviará por WhatsApp en unos segundos.');
       queryClient.invalidateQueries({ queryKey: ['client-debts'] });
     },
-    onError: (error: any, pestanaRespaldo) => {
-      pestanaRespaldo?.close();
+    onError: (error: any) => {
       const msg = error?.response?.data?.message ?? 'No se pudo poner el recordatorio en cola.';
       toast.error(Array.isArray(msg) ? msg.join(' ') : msg);
     },
@@ -269,7 +258,7 @@ function ReminderButton({ debt, className }: { debt: ClientDebt; className: stri
   return (
     <div className={className}>
       <button
-        onClick={() => sendReminder.mutate(abrirPestanaRespaldoSiHaceFalta())}
+        onClick={() => sendReminder.mutate()}
         disabled={sendReminder.isPending}
         className="flex w-full items-center justify-center gap-2 rounded-lg bg-sage-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-sage-600 disabled:cursor-not-allowed disabled:bg-porcelain-300 disabled:text-muted"
       >

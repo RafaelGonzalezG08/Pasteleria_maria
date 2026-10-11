@@ -14,15 +14,12 @@ declare module 'axios' {
 }
 
 /**
- * Si no viene VITE_API_URL fijo de fabrica (el build empaquetado de escritorio
- * ya no lo trae, ver desktop/compilar.js), se calcula con el host desde donde
- * se abrio la pagina. Asi la misma build sirve tanto para la PC (localhost)
- * como para un celular en la misma WiFi (la IP de la PC) sin recompilar nada
- * por dispositivo. El puerto es fijo porque backend/nativo.js ya lo fija asi:
- * 3000 en desarrollo suelto (npm run start:dev), 3010 en el empaquetado.
+ * Si no viene VITE_API_URL fijo de fabrica, se usa el backend de esta misma
+ * PC. El puerto es fijo porque desktop/nativo.js ya lo fija asi: 3000 en
+ * desarrollo suelto (npm run start:dev), 3010 en la app empaquetada.
  */
 const PUERTO_API_POR_DEFECTO = import.meta.env.DEV ? 3000 : 3010;
-const BASE_CALCULADA = `${window.location.protocol}//${window.location.hostname}:${PUERTO_API_POR_DEFECTO}`;
+const BASE_CALCULADA = `http://localhost:${PUERTO_API_POR_DEFECTO}`;
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || `${BASE_CALCULADA}/api`,
@@ -45,10 +42,8 @@ api.interceptors.response.use(
     if (status === 401) {
       useAuthStore.getState().logout();
     }
-    // Sin "response" es que la peticion ni siquiera llego a la PC (WiFi
-    // cortada, la PC apagada/durmiendo) -- eso ya lo avisa la franja de
-    // "Sin conexion con la PC" (ver useConexionPc en Layout.tsx), un toast
-    // encima por cada peticion que fallo seria ruido repetido de lo mismo.
+    // Sin "response" es que la peticion ni siquiera llego al backend (se
+    // esta reiniciando): no se muestra un toast por cada peticion fallida.
     if (status !== 401 && error?.response && !error?.config?.skipErrorToast) {
       const texto = Array.isArray(message) ? message.join(', ') : String(message);
       // `id` estable por mensaje: si varias peticiones fallan con lo mismo
@@ -70,14 +65,17 @@ export function apiUrl(path: string) {
  *
  * Esas imagenes las carga un <img src=...> o un <a href=...> del navegador,
  * que no puede mandar el header Authorization -- por eso el backend acepta el
- * mismo JWT tambien por ?token= (ver uploads-auth.middleware.ts). Sin esto,
- * abrir la app desde el celular (backend escuchando en la red, no solo en
- * localhost) dejaria las fotos de productos y facturas visibles a cualquiera
- * en la misma WiFi con solo adivinar el nombre del archivo.
+ * mismo JWT tambien por ?token= (ver uploads-auth.middleware.ts).
  */
 export function urlConToken(url: string): string {
   const token = useAuthStore.getState().token;
   if (!token) return url;
   const separador = url.includes('?') ? '&' : '?';
   return `${url}${separador}token=${encodeURIComponent(token)}`;
+}
+
+/** URL lista para un <img> de un archivo de /uploads (foto de producto, logo, referencia). */
+export function urlArchivo(ruta: string | null | undefined): string | null {
+  if (!ruta) return null;
+  return urlConToken(ruta.startsWith('http') ? ruta : apiUrl(ruta));
 }

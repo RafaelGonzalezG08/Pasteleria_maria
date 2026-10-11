@@ -8,12 +8,26 @@ import Products from './pages/products/Products';
 import Clients from './pages/clients/Clients';
 import Cobros from './pages/cobros/Cobros';
 import Sales from './pages/sales/Sales';
-import Orders from './pages/orders/Orders';
 import Expenses from './pages/expenses/Expenses';
 import Reports from './pages/reports/Reports';
 import Transactions from './pages/transactions/Transactions';
 import Costs from './pages/costs/Costs';
 import Settings from './pages/settings/Settings';
+import Inventario from './pages/inventario/Inventario';
+import Recetas from './pages/recetas/Recetas';
+import Produccion from './pages/produccion/Produccion';
+import Compras from './pages/compras/Compras';
+import Encargos from './pages/encargos/Encargos';
+import type { Role } from './types';
+
+/** Quien entra a cada pantalla (el backend aplica las mismas reglas). */
+const CAJA: Role[] = ['ADMIN', 'CAJERO'];
+const COCINA: Role[] = ['ADMIN', 'REPOSTERO'];
+const SOLO_ADMIN: Role[] = ['ADMIN'];
+
+function Protegida({ roles, children }: { roles: Role[]; children: JSX.Element }) {
+  return <ProtectedRoute roles={roles}>{children}</ProtectedRoute>;
+}
 
 export default function App() {
   return (
@@ -29,73 +43,21 @@ export default function App() {
           }
         >
           <Route path="/" element={<Dashboard />} />
-          <Route
-            path="/pos"
-            element={
-              <ProtectedRoute roles={['ADMIN', 'CAJERO']}>
-                <POS />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/clientes" element={<Clients />} />
-          <Route
-            path="/cobros"
-            element={
-              <ProtectedRoute roles={['ADMIN', 'CAJERO', 'CONTABILIDAD']}>
-                <Cobros />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/productos"
-            element={
-              <ProtectedRoute roles={['ADMIN']}>
-                <Products />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/ventas" element={<Sales />} />
-          <Route path="/pedidos" element={<Orders />} />
-          <Route
-            path="/gastos"
-            element={
-              <ProtectedRoute roles={['ADMIN', 'CONTABILIDAD']}>
-                <Expenses />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/reportes"
-            element={
-              <ProtectedRoute roles={['ADMIN', 'CONTABILIDAD']}>
-                <Reports />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/transacciones"
-            element={
-              <ProtectedRoute roles={['ADMIN', 'CONTABILIDAD']}>
-                <Transactions />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/costos"
-            element={
-              <ProtectedRoute roles={['ADMIN']}>
-                <Costs />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/configuracion"
-            element={
-              <ProtectedRoute roles={['ADMIN']}>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/pos" element={<Protegida roles={CAJA}><POS /></Protegida>} />
+          <Route path="/encargos" element={<Encargos />} />
+          <Route path="/productos" element={<Products />} />
+          <Route path="/inventario" element={<Protegida roles={COCINA}><Inventario /></Protegida>} />
+          <Route path="/recetas" element={<Protegida roles={COCINA}><Recetas /></Protegida>} />
+          <Route path="/produccion" element={<Protegida roles={COCINA}><Produccion /></Protegida>} />
+          <Route path="/compras" element={<Protegida roles={SOLO_ADMIN}><Compras /></Protegida>} />
+          <Route path="/clientes" element={<Protegida roles={CAJA}><Clients /></Protegida>} />
+          <Route path="/cobros" element={<Protegida roles={CAJA}><Cobros /></Protegida>} />
+          <Route path="/ventas" element={<Protegida roles={CAJA}><Sales /></Protegida>} />
+          <Route path="/gastos" element={<Protegida roles={SOLO_ADMIN}><Expenses /></Protegida>} />
+          <Route path="/reportes" element={<Protegida roles={SOLO_ADMIN}><Reports /></Protegida>} />
+          <Route path="/transacciones" element={<Protegida roles={SOLO_ADMIN}><Transactions /></Protegida>} />
+          <Route path="/costos" element={<Protegida roles={SOLO_ADMIN}><Costs /></Protegida>} />
+          <Route path="/configuracion" element={<Protegida roles={SOLO_ADMIN}><Settings /></Protegida>} />
         </Route>
       </Routes>
     </BrowserRouter>

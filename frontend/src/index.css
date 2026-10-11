@@ -271,3 +271,25 @@ textarea {
   outline: 2px solid rgb(var(--c-copper-600));
   outline-offset: 2px;
 }
+
+/*
+ * Impresion: solo se imprime lo marcado con .zona-impresion (el comprobante
+ * de un encargo, la hoja de produccion). Todo lo demas -- menu, botones, la
+ * pagina de fondo detras del modal -- se oculta.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .zona-impresion,
+  .zona-impresion * {
+    visibility: visible;
+  }
+  .zona-impresion {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none !important;
+  }
+}

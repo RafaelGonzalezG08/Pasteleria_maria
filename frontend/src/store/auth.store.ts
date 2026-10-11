@@ -15,7 +15,7 @@ interface AuthState {
   logout: () => void;
 }
 
-const STORAGE_KEY = 'cafe-shopping-auth';
+const STORAGE_KEY = 'pasteleria-maria-auth';
 
 function loadInitial(): { token: string | null; user: AuthUser | null } {
   // Antes la sesion vivia en localStorage y sobrevivia a cerrar la app, asi

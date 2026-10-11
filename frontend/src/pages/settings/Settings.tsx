@@ -11,8 +11,6 @@ import {
   RotateCcw,
   AlertTriangle,
   Image as ImageIcon,
-  Globe,
-  UploadCloud,
   Loader2,
   ChevronDown,
   Store,
@@ -29,12 +27,10 @@ import {
   type IntegrationsStatus,
   type CrearUsuarioDto,
 } from '../../api/settings.api';
-import { Button, Card, PageHeader, Badge } from '../../components/ui';
+import { Button, Card, PageHeader, Badge, Select } from '../../components/ui';
 import { formatDateTime } from '../../lib/format';
 import { useAuthStore } from '../../store/auth.store';
-import type { BusinessProfile } from '../../types';
-import { CatalogoWeb } from './components/CatalogoWeb';
-import { AgregarDatos } from './components/AgregarDatos';
+import { ROLE_LABEL, type BusinessProfile, type Role } from '../../types';
 import { CambiarClave } from './components/CambiarClave';
 import { NewUserForm } from './components/NewUserForm';
 
@@ -102,11 +98,6 @@ export default function Settings() {
     queryFn: () => settingsApi.getIntegrationsStatus(),
   });
 
-  const { data: redLocal } = useQuery<{ url: string | null; certUrl: string | null }>({
-    queryKey: ['settings', 'red-local'],
-    queryFn: () => settingsApi.getRedLocal(),
-  });
-
   const { data: users = [] } = useQuery<AppUser[]>({
     queryKey: ['users'],
     queryFn: () => settingsApi.listUsers(),
@@ -115,15 +106,15 @@ export default function Settings() {
   const [form, setForm] = useState({
     nombre: '',
     direccion: '',
+    telefono: '',
     identifFiscal: '',
-    tasaImpuesto: '0.18',
-    telefonoWhatsapp: '',
-    descripcionWeb: '',
-    relevoPedidosUrl: '',
-    relevoPedidosClave: '',
-    cloudflareApiToken: '',
-    cloudflareAccountId: '',
-    cloudflarePagesProject: '',
+    moneda: 'RD$',
+    nombreImpuesto: 'ITBIS',
+    tasaImpuesto: '18',
+    margenGananciaPct: '60',
+    diasAlertaEncargos: '2',
+    diasAlertaVencimiento: '7',
+    diasAlertaCumpleanos: '7',
   });
 
   useEffect(() => {
@@ -131,15 +122,16 @@ export default function Settings() {
       setForm({
         nombre: profile.nombre,
         direccion: profile.direccion ?? '',
+        telefono: profile.telefono ?? '',
         identifFiscal: profile.identifFiscal ?? '',
-        tasaImpuesto: String(profile.tasaImpuesto),
-        telefonoWhatsapp: profile.telefonoWhatsapp ?? '',
-        descripcionWeb: profile.descripcionWeb ?? '',
-        relevoPedidosUrl: profile.relevoPedidosUrl ?? '',
-        relevoPedidosClave: profile.relevoPedidosClave ?? '',
-        cloudflareApiToken: profile.cloudflareApiToken ?? '',
-        cloudflareAccountId: profile.cloudflareAccountId ?? '',
-        cloudflarePagesProject: profile.cloudflarePagesProject ?? '',
+        moneda: profile.moneda ?? 'RD$',
+        nombreImpuesto: profile.nombreImpuesto ?? 'ITBIS',
+        // En pantalla el impuesto va en porcentaje (18), en la base como tasa (0.18).
+        tasaImpuesto: String(Math.round(Number(profile.tasaImpuesto) * 10000) / 100),
+        margenGananciaPct: String(Number(profile.margenGananciaPct)),
+        diasAlertaEncargos: String(profile.diasAlertaEncargos),
+        diasAlertaVencimiento: String(profile.diasAlertaVencimiento),
+        diasAlertaCumpleanos: String(profile.diasAlertaCumpleanos),
       });
     }
   }, [profile]);
@@ -222,11 +214,23 @@ export default function Settings() {
     },
   });
 
+  const changeRole = useMutation({
+    mutationFn: ({ id, role }: { id: string; role: Role }) => settingsApi.changeUserRole(id, role),
+    onSuccess: () => {
+      toast.success('Rol actualizado.');
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error: any) => {
+      const msg = error?.response?.data?.message ?? 'No se pudo cambiar el rol.';
+      toast.error(Array.isArray(msg) ? msg.join(' ') : msg);
+    },
+  });
+
   return (
     <div>
       <PageHeader
         title="Configuracion"
-        subtitle="Datos del negocio, usuarios, catalogo y respaldos"
+        subtitle="Datos del negocio, impuesto, usuarios y respaldos"
         action={<IntegracionesChip whatsapp={Boolean(integrations?.whatsapp)} />}
       />
 
@@ -235,7 +239,7 @@ export default function Settings() {
           titulo="Datos del negocio"
           icono={Store}
           abiertaPorDefecto
-          resumen={form.nombre || 'Nombre, direccion, impuesto e icono'}
+          resumen={form.nombre || 'Nombre, moneda, impuesto, margen e icono'}
         >
           <div className="space-y-3">
             <div>
@@ -273,56 +277,50 @@ export default function Settings() {
               </div>
             </div>
             <Field label="Nombre" value={form.nombre} onChange={(v) => setForm((f) => ({ ...f, nombre: v }))} />
+            <Field label="Direccion" value={form.direccion} onChange={(v) => setForm((f) => ({ ...f, direccion: v }))} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Telefono" value={form.telefono} onChange={(v) => setForm((f) => ({ ...f, telefono: v }))} />
+              <Field label="RNC" value={form.identifFiscal} onChange={(v) => setForm((f) => ({ ...f, identifFiscal: v }))} />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label="Moneda (simbolo)" value={form.moneda} onChange={(v) => setForm((f) => ({ ...f, moneda: v }))} />
+              <Field label="Nombre del impuesto" value={form.nombreImpuesto} onChange={(v) => setForm((f) => ({ ...f, nombreImpuesto: v }))} />
+              <Field
+                label="Impuesto (%)"
+                type="number"
+                value={form.tasaImpuesto}
+                onChange={(v) => setForm((f) => ({ ...f, tasaImpuesto: v }))}
+              />
+            </div>
             <Field
-              label="Direccion"
-              value={form.direccion}
-              onChange={(v) => setForm((f) => ({ ...f, direccion: v }))}
-            />
-            <Field
-              label="RNC / ID fiscal"
-              value={form.identifFiscal}
-              onChange={(v) => setForm((f) => ({ ...f, identifFiscal: v }))}
-            />
-            <Field
-              label="Tasa de impuesto (0.18 = 18%)"
+              label="Ganancia sobre el costo para el precio sugerido (%)"
               type="number"
-              value={form.tasaImpuesto}
-              onChange={(v) => setForm((f) => ({ ...f, tasaImpuesto: v }))}
+              value={form.margenGananciaPct}
+              onChange={(v) => setForm((f) => ({ ...f, margenGananciaPct: v }))}
             />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field
+                label="Avisar encargos con (dias)"
+                type="number"
+                value={form.diasAlertaEncargos}
+                onChange={(v) => setForm((f) => ({ ...f, diasAlertaEncargos: v }))}
+              />
+              <Field
+                label="Avisar vencimientos con (dias)"
+                type="number"
+                value={form.diasAlertaVencimiento}
+                onChange={(v) => setForm((f) => ({ ...f, diasAlertaVencimiento: v }))}
+              />
+              <Field
+                label="Avisar cumpleaños con (dias)"
+                type="number"
+                value={form.diasAlertaCumpleanos}
+                onChange={(v) => setForm((f) => ({ ...f, diasAlertaCumpleanos: v }))}
+              />
+            </div>
             <Button onClick={() => updateProfile.mutate()} disabled={updateProfile.isPending}>
               <Save size={16} /> Guardar cambios
             </Button>
-
-            {redLocal?.url && (
-              <div className="border-t border-porcelain-200 pt-3">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
-                  Accede desde el celular
-                </p>
-                <p className="text-xs leading-relaxed text-muted">
-                  Con el celular en la misma red WiFi que esta PC, abre{' '}
-                  <strong>{redLocal.url}</strong> en el navegador para usar la app (ventas,
-                  productos, fotos) igual que en la computadora.
-                </p>
-                {redLocal.certUrl && (
-                  <p className="mt-2 text-xs leading-relaxed text-muted">
-                    La primera vez, Chrome va a avisar "conexion no privada" — toca{' '}
-                    <strong>Avanzado &rarr; Continuar</strong> (es esta misma PC). Para que ese
-                    aviso no vuelva a salir y puedas instalar la app sin la barra del navegador,{' '}
-                    <a
-                      href={redLocal.certUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-semibold text-copper-600 hover:underline"
-                    >
-                      descarga el certificado
-                    </a>{' '}
-                    desde el celular y en <strong>Ajustes &rarr; Seguridad &rarr; Cifrado y
-                    credenciales &rarr; Instalar un certificado &rarr; Certificado de CA</strong>{' '}
-                    elige ese archivo. Se hace una sola vez (hasta que cambie la IP de la WiFi).
-                  </p>
-                )}
-              </div>
-            )}
           </div>
         </Seccion>
 
@@ -336,9 +334,19 @@ export default function Settings() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {!u.activo && <Badge tone="brick">Inactivo</Badge>}
-                  <span className="rounded-full bg-porcelain-200 px-2 py-0.5 text-xs font-semibold text-muted">
-                    {u.role}
-                  </span>
+                  {u.id === currentUserId ? (
+                    <span className="rounded-full bg-porcelain-200 px-2 py-0.5 text-xs font-semibold text-muted">
+                      {ROLE_LABEL[u.role] ?? u.role}
+                    </span>
+                  ) : (
+                    <Select
+                      size="sm"
+                      className="w-36"
+                      value={u.role}
+                      onChange={(v) => changeRole.mutate({ id: u.id, role: v as Role })}
+                      options={(Object.keys(ROLE_LABEL) as Role[]).map((r) => ({ value: r, label: ROLE_LABEL[r] }))}
+                    />
+                  )}
                   {u.id !== currentUserId && (
                     <button
                       onClick={() => toggleActive.mutate({ id: u.id, activo: !u.activo })}
@@ -358,25 +366,6 @@ export default function Settings() {
             ))}
           </div>
           <NewUserForm onSubmit={(payload) => createUser.mutate(payload)} />
-        </Seccion>
-
-        <Seccion
-          titulo="Catalogo web"
-          icono={Globe}
-          resumen="Pagina publica de tus piezas + pedidos por WhatsApp"
-        >
-          <CatalogoWeb
-            telefonoWhatsapp={form.telefonoWhatsapp}
-            descripcionWeb={form.descripcionWeb}
-            relevoPedidosUrl={form.relevoPedidosUrl}
-            relevoPedidosClave={form.relevoPedidosClave}
-            cloudflareApiToken={form.cloudflareApiToken}
-            cloudflareAccountId={form.cloudflareAccountId}
-            cloudflarePagesProject={form.cloudflarePagesProject}
-            onChange={(campo, valor) => setForm((f) => ({ ...f, [campo]: valor }))}
-            onGuardar={() => updateProfile.mutate()}
-            guardando={updateProfile.isPending}
-          />
         </Seccion>
 
         <Seccion
@@ -472,14 +461,6 @@ export default function Settings() {
           )}
         </Seccion>
 
-        <Seccion
-          titulo="Añadir datos de otra PC"
-          icono={UploadCloud}
-          resumen="Traer el inventario de la computadora de otra persona"
-        >
-          <AgregarDatos />
-        </Seccion>
-
         <Seccion titulo="Cambiar mi clave" icono={KeyRound} resumen="Contraseña de tu propio usuario">
           <CambiarClave />
         </Seccion>
@@ -566,10 +547,10 @@ function Field({
       <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">{label}</label>
       <input
         type={type}
-        step={type === 'number' ? '0.01' : undefined}
+        step={type === 'number' ? 'any' : undefined}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-porcelain-300 px-3 py-2 text-sm outline-none focus:border-copper-500"
+        className="w-full rounded-lg px-3 py-2 text-sm outline-none"
       />
     </div>
   );

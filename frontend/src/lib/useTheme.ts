@@ -6,12 +6,8 @@ import { create } from 'zustand';
  * (Tailwind darkMode: 'class'). index.html ya aplica la clase antes de pintar
  * para que no haya parpadeo; aqui solo se alterna.
  */
-const CLAVE = 'cafe-shopping-tema';
+const CLAVE = 'pasteleria-maria-tema';
 export type Tema = 'claro' | 'oscuro';
-
-function esMovil(): boolean {
-  return typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-}
 
 function leerInicial(): Tema {
   try {
@@ -20,12 +16,9 @@ function leerInicial(): Tema {
   } catch {
     /* localStorage bloqueado: se usa la preferencia del sistema */
   }
-  // Sin preferencia guardada: en el celular arranca en claro sin importar el
-  // tema del sistema operativo (Android casi siempre trae "oscuro" de
-  // fabrica, y eso no debe decidir el tema de esta app). En PC (Electron) si
-  // se respeta el tema de Windows. La misma logica vive duplicada en
-  // index.html (se aplica antes de que cargue este modulo) -- tocar las dos.
-  if (esMovil()) return 'claro';
+  // Sin preferencia guardada se respeta el tema de Windows. La misma logica
+  // vive duplicada en index.html (se aplica antes de que cargue este
+  // modulo) -- tocar las dos.
   return typeof window !== 'undefined' &&
     window.matchMedia('(prefers-color-scheme: dark)').matches
     ? 'oscuro'

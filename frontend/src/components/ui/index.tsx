@@ -269,3 +269,111 @@ export function ConfirmPasswordModal({
     </div>
   );
 }
+
+/**
+ * Ventana modal con el mismo marco de todas las pantallas (titulo, X para
+ * cerrar, scroll interno). El scroll va en el div de adentro y no en el Card:
+ * Chrome no recorta la barra de scroll a las esquinas redondeadas cuando
+ * overflow y border-radius estan en el mismo elemento.
+ */
+export function Modal({
+  titulo,
+  onClose,
+  children,
+  ancho = 'max-w-lg',
+}: {
+  titulo: ReactNode;
+  onClose: () => void;
+  children: ReactNode;
+  ancho?: string;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-espresso-950/50 p-4">
+      <Card className={`max-h-[92vh] w-full ${ancho} overflow-hidden`}>
+        <div className="max-h-[92vh] overflow-y-auto p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="font-display text-lg font-bold text-ink">{titulo}</h2>
+            <button onClick={onClose} className="shrink-0 rounded p-1 text-muted hover:bg-porcelain-200">
+              <X size={18} />
+            </button>
+          </div>
+          {children}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/** Etiqueta + campo, con el estilo de etiqueta en mayusculas de todos los formularios. */
+export function Field({
+  label,
+  children,
+  ayuda,
+  className = '',
+}: {
+  label: ReactNode;
+  children: ReactNode;
+  ayuda?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">{label}</label>
+      {children}
+      {ayuda && <p className="mt-1 text-[11px] text-muted">{ayuda}</p>}
+    </div>
+  );
+}
+
+/** Clase comun de los campos de texto/numero de los formularios. */
+export const INPUT = 'w-full rounded-lg px-3 py-2 text-sm outline-none';
+
+/** Pestañas tipo "pastilla" (mismo estilo que los filtros de Productos y Encargos). */
+export function Tabs<T extends string>({
+  value,
+  onChange,
+  opciones,
+}: {
+  value: T;
+  onChange: (value: T) => void;
+  opciones: { valor: T; texto: ReactNode }[];
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {opciones.map((o) => (
+        <button
+          key={o.valor}
+          type="button"
+          onClick={() => onChange(o.valor)}
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+            value === o.valor ? 'bg-espresso-700 text-white' : 'bg-porcelain-200 text-muted hover:bg-porcelain-300'
+          }`}
+        >
+          {o.texto}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Tarjeta de numero grande (KPI) usada en Dashboard, Reportes e Inventario. */
+export function Stat({
+  label,
+  value,
+  hint,
+  tone = 'ink',
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  hint?: ReactNode;
+  tone?: 'ink' | 'brick' | 'sage' | 'copper';
+}) {
+  const color = { ink: 'text-ink', brick: 'text-brick-600', sage: 'text-sage-600', copper: 'text-copper-600' }[tone];
+  return (
+    <Card className="p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</p>
+      <p className={`mt-2 font-display text-2xl font-bold tabular-nums ${color}`}>{value}</p>
+      {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+    </Card>
+  );
+}
