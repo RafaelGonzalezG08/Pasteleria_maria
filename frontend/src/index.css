@@ -136,7 +136,7 @@ select {
   }
   /*
    * Un input/textarea es de los pocos elementos HTML que NO respeta el ancho
-   * de su contenedor por defecto: si el panel se achica (celular, ventana
+   * de su contenedor por defecto: si el panel se achica (ventana
    * angosta) y el campo tiene un ancho fijo (w-16, w-24...) o esta dentro de
    * una fila flex, se sale por el borde en vez de encogerse. max-width:100%
    * lo tope al ancho disponible; min-width:0 deja que un input flex-1 se

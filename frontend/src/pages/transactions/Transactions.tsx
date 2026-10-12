@@ -296,7 +296,7 @@ export default function Transactions() {
         />
       ) : (
         <>
-          {/* Celular: tarjetas compactas; el detalle completo va en TransaccionDetailModal. */}
+          {/* Ventana angosta: tarjetas compactas; el detalle completo va en TransaccionDetailModal. */}
           <div className="space-y-2 md:hidden">
             {items.map((t) => (
               <Card
@@ -440,7 +440,7 @@ export default function Transactions() {
   );
 }
 
-/** Detalle completo de una transaccion, para celular (la tabla de PC ya muestra todo en la fila). */
+/** Detalle completo de una transaccion, para ventana angosta (la tabla ya muestra todo en la fila). */
 function TransaccionDetailModal({
   t,
   puedeEliminar,

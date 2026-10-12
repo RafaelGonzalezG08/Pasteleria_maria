@@ -1,43 +1,30 @@
-# Cafe Shopping — app de escritorio
+# Pastelería María - App de escritorio
 
-Empaqueta el backend + el frontend + el agente de WhatsApp en una sola app de
-Windows instalable, con icono propio. Al abrirla: levanta el backend como
-proceso hijo, sirve la interfaz, prende el agente de WhatsApp y muestra todo en
-una ventana nativa. **No necesita Docker.**
+Empaqueta todo el proyecto (backend, interfaz y agente de WhatsApp) en una sola
+app de Windows con icono propio. Al abrirla:
 
-- `main.js` — ciclo de vida de Electron: arranque, ventana, splash, actualizador,
-  copia de respaldos a OneDrive, agente de WhatsApp.
-- `nativo.js` — arranque "sin Docker": levanta el backend hijo, sirve el frontend
-  compilado y renderiza las facturas en una BrowserWindow oculta.
-- `compilar.js` — genera el instalador completo en orden (ver abajo).
+1. Busca actualizaciones en los releases de
+   [RafaelGonzalezG08/Pasteleria_maria](https://github.com/RafaelGonzalezG08/Pasteleria_maria/releases).
+2. Arranca el backend (NestJS + SQLite) como proceso hijo con el Node que ya
+   trae Electron (no hace falta instalar Node en la PC del negocio).
+3. Sirve la interfaz en `http://localhost` y la muestra en una ventana nativa.
+4. Arranca el agente de WhatsApp (`send_whatsapp_agent.exe` o `.ahk`).
 
-## Compilar el instalador
+No usa Docker ni base de datos externa. Los datos viven en
+`%APPDATA%\Pasteleria Maria\datos\` y sobreviven a las actualizaciones.
 
-Requiere **Windows** (electron-builder genera un instalador de Windows) y
-**Node.js 20+**.
+## Archivos
 
-```powershell
-cd desktop
-npm install
-node compilar.js 2.0.24
-```
+| Archivo | Para qué |
+|---|---|
+| `main.js` | Ventanas, splash, actualizador automático (electron-updater), arranque del agente. |
+| `nativo.js` | Backend hijo (con reinicio si se cae), servidor de la interfaz, render de facturas, carpeta de datos, secreto JWT. |
+| `compilar.js` | Genera el instalador en orden (backend → interfaz → agente → versión → electron-builder). |
+| `splash.html` | Pantalla de carga. |
+| `build/icon.png` | Icono de la app y del instalador (512×512). |
+| `dev-app-update.yml` | Repositorio de actualizaciones al probar sin empaquetar. |
 
-El número es la versión nueva — **súbelo en cada release** (electron-updater
-compara versiones para ofrecer la actualización). `compilar.js`:
-
-1. Compila el backend con webpack (`npm run build:desktop` → un solo `dist/main.js`).
-2. Compila el frontend con `VITE_API_URL=http://localhost:3010/api`.
-3. Escribe la versión en `desktop/package.json`.
-4. Corre `electron-builder`.
-
-Resultado: `desktop/dist/Cafe Shopping Setup 2.0.24.exe`.
-
-> La primera vez, electron-builder descarga Electron (~110 MB) y `winCodeSign`.
-> Ese último trae symlinks de macOS que Windows sólo deja crear con **Modo de
-> desarrollador** activado (`ms-settings:developers`) o en una terminal de
-> administrador. Si el build falla en "winCodeSign", esa es la causa.
-
-## Probar sin compilar el instalador
+## Probar sin compilar
 
 ```powershell
 cd desktop
@@ -45,27 +32,34 @@ npm install
 npm start
 ```
 
-> Usa la base de datos real de la app instalada
-> (`%APPDATA%\cafe-shopping-desktop\datos\`). Para una base aparte:
-> `set CAFE_SHOPPING_TEST_DATA_DIR=C:\ruta\temporal` antes de `npm start`.
+Antes compila backend (`npm run build:desktop` en `backend/`) e interfaz
+(`npm run build` en `frontend/`). Ojo: usa la carpeta de datos real; para una
+aparte define `PASTELERIA_MARIA_TEST_DATA_DIR`.
 
-## Requisitos para *usar* la app instalada
+## Generar el instalador
 
-- **WhatsApp Desktop** instalado y con sesión iniciada (para el envío de facturas).
-- Si el agente se empaquetó como `.ahk` en vez de `.exe`: **AutoHotkey v1.1**.
-  Si `send_whatsapp_agent.exe` existe en la raíz del repo al compilar, se empaqueta
-  ese y no hace falta AutoHotkey en la PC del negocio.
+```powershell
+cd desktop
+npm install
+npm run instalador        # sube el ultimo numero de version
+node compilar.js 1.2.0    # o una version exacta
+```
+
+Sale en `desktop/dist/Pasteleria-Maria-Setup-<version>.exe`.
+
+Para **publicar** una actualización no hace falta esto: basta empujar un tag
+`vX.Y.Z` y GitHub Actions compila y crea el release (ver el README principal,
+"Publicar una nueva versión").
+
+## Agente de WhatsApp
+
+`send_whatsapp_agent.ahk` (AutoHotkey v1.1) vigila la cola de facturas y las
+pega en WhatsApp Desktop. Se compila a `.exe` en GitHub Actions (y en
+`compilar.js` si la PC tiene AutoHotkey) para que la PC del negocio no necesite
+AutoHotkey. El `.exe` no se guarda en el repositorio.
 
 ## Icono
 
-`build/icon.png` (PNG cuadrado, idealmente 512×512, fondo transparente).
-electron-builder genera el `.ico` de Windows a partir de ese archivo.
-
-## Publicar releases automáticamente
-
-`.github/workflows/build.yml` compila y sube el instalador al empujar un tag:
-
-```bash
-git tag v2.0.24
-git push --tags
-```
+Reemplaza `build/icon.png` (cuadrada, 512×512, idealmente fondo transparente) y
+vuelve a compilar. El icono de la pestaña de desarrollo es
+`frontend/public/icon.svg`.

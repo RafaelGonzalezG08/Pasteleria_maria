@@ -6,12 +6,3 @@ export function normalizarTexto(texto: string): string {
     .trim()
     .toLowerCase();
 }
-
-/**
- * Primera palabra del nombre, ya normalizada. Es lo que se compara contra el
- * nombre de una categoria para clasificar una pieza sola ("Anillo solitario
- * oro" -> "anillo"). Devuelve '' si el nombre esta vacio.
- */
-export function primeraPalabraNormalizada(nombre: string): string {
-  return normalizarTexto((nombre ?? '').trim().split(/\s+/)[0] ?? '');
-}

@@ -56,7 +56,7 @@ export default function Expenses() {
     <div>
       <PageHeader title="Gastos" subtitle="Registro de gastos operativos del negocio" />
 
-      {/* En celular (una sola columna) el orden del DOM es el orden visual:
+      {/* En ventana angosta (una sola columna) el orden del DOM es el orden visual:
           el formulario va primero (order-1) para que se pueda registrar un
           gasto sin bajar antes por toda la tabla. En escritorio (lg+) el
           order-2/order-1 lo regresa a tabla-izquierda + form-derecha, como

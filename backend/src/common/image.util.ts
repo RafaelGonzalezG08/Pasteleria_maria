@@ -6,11 +6,11 @@ const logger = new Logger('ImageUtil');
 /**
  * Lado del cuadrado al que se reducen las fotos de producto.
  *
- * 1200 y no 800: en joyeria los detalles finos (eslabones de una cadena, el
- * pave de circonias) son justo lo que el cliente quiere mirar de cerca, y a
- * 800 px se notaban blandos al ampliarlos en pantallas de alta densidad. A
- * 1200 con calidad 90 las fotos siguen pesando ~60-90 KB — nada al lado de
- * los 2-3 MB que salen del celular — asi que no hay razon para apretar mas.
+ * 1200 y no 800: los detalles de la decoracion (letras del mensaje, flores de
+ * crema) son justo lo que se quiere mirar de cerca, y a 800 px se notaban
+ * blandos al ampliarlos. A 1200 con calidad 90 las fotos siguen pesando
+ * ~60-90 KB — nada al lado de los 2-3 MB de una foto de camara — asi que no
+ * hay razon para apretar mas.
  */
 const PRODUCT_SIZE = 1200;
 /** Lado maximo del logo del negocio (se muestra a 42px en la factura y 36px en el menu). */
@@ -21,10 +21,9 @@ const LOGO_SIZE = 256;
  *
  * La foto se reduce y convierte a WebP en el servidor (ver
  * optimizeProductImage), asi que este numero no es "cuanto pesa la foto
- * final" - es solo un techo razonable para lo que sube el celular. Los
- * celulares modernos (48+ MP) sacan fotos de 10-20 MB sin comprimir; 5 MB
- * rechazaba fotos reales de joyeria antes de que el servidor llegara a
- * comprimirlas.
+ * final" - es solo un techo razonable. Las camaras modernas (48+ MP) sacan
+ * fotos de 10-20 MB sin comprimir; 5 MB rechazaba fotos reales antes de que
+ * el servidor llegara a comprimirlas.
  */
 export const MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024;
 
@@ -37,7 +36,7 @@ export interface OptimizedImage {
 /**
  * Reduce y comprime la foto de un producto.
  *
- * Las fotos salen del celular pesando varios MB (una llego a 2.9 MB), pero se
+ * Las fotos llegan pesando varios MB (una llego a 2.9 MB), pero se
  * muestran a 144px en el catalogo y 96px en el POS. Como el POS carga TODAS
  * las fotos del catalogo de golpe, guardarlas al tamaño original hacia la
  * pantalla de venta cada vez mas lenta segun crecia el inventario, y ademas
@@ -57,7 +56,7 @@ export async function optimizeProductImage(
 ): Promise<OptimizedImage> {
   try {
     const optimized = await sharp(buffer)
-      .rotate() // respeta la orientacion EXIF del celular (si no, salen acostadas)
+      .rotate() // respeta la orientacion EXIF de la foto (si no, salen acostadas)
       .resize(PRODUCT_SIZE, PRODUCT_SIZE, {
         fit: 'cover',
         position: 'centre',

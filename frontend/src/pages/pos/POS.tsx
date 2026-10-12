@@ -194,7 +194,7 @@ export default function POS() {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
-      {/* Catalogo. En celular va DESPUES del carrito (order-2): asi el carrito/cobro
+      {/* Productos. En ventana angosta va DESPUES del carrito (order-2): asi el carrito/cobro
           queda arriba, sin tener que scrollear todo el catalogo para pagar. */}
       <div className="order-2 lg:order-1">
         <div className="buscador mb-4">

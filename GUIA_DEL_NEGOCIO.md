@@ -1,434 +1,212 @@
-# Cafe Shopping — Guía de uso
+# Pastelería María — Guía de uso
 
-Sistema de punto de venta, facturación e inventario para joyería.
-
-Esta guía está escrita para quien va a usar el programa en el negocio, no para
-programadores. Léela una vez de principio a fin antes de empezar a vender.
+Esta guía es para quien usa el programa en la pastelería, no para
+programadores. Léela una vez completa antes de empezar.
 
 ---
 
 ## Índice
 
 1. [Qué necesitas](#1-qué-necesitas)
-2. [Instalación](#2-instalación)
-3. [Primeros pasos (hazlo antes de vender)](#3-primeros-pasos-hazlo-antes-de-vender)
+2. [Instalación y primer arranque](#2-instalación-y-primer-arranque)
+3. [Preparar el negocio (una sola vez)](#3-preparar-el-negocio-una-sola-vez)
 4. [Usuarios y permisos](#4-usuarios-y-permisos)
-5. [Productos](#5-productos)
-6. [Clientes](#6-clientes)
-7. [Punto de venta](#7-punto-de-venta)
-8. [Envío de facturas por WhatsApp](#8-envío-de-facturas-por-whatsapp)
-9. [Pedidos](#9-pedidos)
-10. [Ventas: corregir y eliminar facturas](#10-ventas-corregir-y-eliminar-facturas)
-11. [Cobros](#11-cobros)
-12. [Gastos](#12-gastos)
-13. [Reportes](#13-reportes)
-14. [Costos](#14-costos-solo-administrador)
-15. [Respaldos](#15-respaldos)
-16. [Problemas comunes](#16-problemas-comunes)
+5. [Inventario de insumos](#5-inventario-de-insumos)
+6. [Recetas](#6-recetas)
+7. [Producción](#7-producción)
+8. [Productos](#8-productos)
+9. [Encargos](#9-encargos)
+10. [Punto de venta](#10-punto-de-venta)
+11. [Factura por WhatsApp](#11-factura-por-whatsapp)
+12. [Compras y proveedores](#12-compras-y-proveedores)
+13. [Clientes](#13-clientes)
+14. [Ventas, cobros y gastos](#14-ventas-cobros-y-gastos)
+15. [Reportes](#15-reportes)
+16. [Respaldos](#16-respaldos)
+17. [Actualizaciones](#17-actualizaciones)
+18. [Problemas comunes](#18-problemas-comunes)
 
 ---
 
 ## 1. Qué necesitas
 
-- Una computadora con **Windows 10 u 11**
-- **WhatsApp Desktop** instalado y con la sesión abierta, si vas a enviar
-  facturas por WhatsApp
-- Nada más. El programa no necesita internet para vender, ni instalar
-  programas adicionales.
+- Una PC con Windows 10 u 11.
+- **WhatsApp Desktop** instalado y con sesión iniciada, si vas a mandar
+  facturas por WhatsApp.
+- Internet solo para recibir actualizaciones; para trabajar no hace falta.
 
-> **Internet** solo hace falta para dos cosas: enviar facturas por WhatsApp y
-> que los respaldos suban a OneDrive. Puedes facturar sin conexión.
+## 2. Instalación y primer arranque
 
----
+1. Ejecuta `Pasteleria-Maria-Setup-X.Y.Z.exe` y sigue los pasos.
+2. Abre **Pastelería María** desde el escritorio.
+3. La primera vez aparece **Crear administrador**: escribe tu nombre, tu correo
+   y una contraseña que recuerdes. Ese es el usuario dueño del sistema; no
+   existe ningún usuario "de fábrica".
 
-## 2. Instalación
+La sesión se cierra sola tras 30 minutos sin uso y al cerrar el programa.
 
-1. Haz doble clic en **`Cafe Shopping Setup 2.0.1.exe`**
-2. Windows mostrará una pantalla azul: *"Windows protegió tu PC"*.
-   Haz clic en **Más información** → **Ejecutar de todas formas**.
-   Es normal: el instalador no tiene firma digital (es un trámite de pago
-   anual), no significa que haya un problema.
-3. Sigue el asistente. Puedes elegir la carpeta o dejar la que propone.
-4. Al terminar tendrás un acceso directo **Cafe Shopping** en el escritorio.
+## 3. Preparar el negocio (una sola vez)
 
-Para abrirlo, doble clic en ese acceso directo. Tarda unos **5 segundos** en
-levantar.
+En **Configuración** (engranaje, abajo a la izquierda):
 
----
+- **Datos del negocio:** nombre, logo, dirección, teléfono y RNC (salen en la
+  factura y en el ticket de encargo).
+- **Moneda:** RD$ por defecto.
+- **Impuesto:** nombre (ITBIS) y porcentaje (18). Pon 0 si no cobras impuesto.
+- **Ganancia sobre el costo (%):** se usa para el *precio sugerido* de las recetas.
+- **Días de aviso:** con cuánta anticipación avisar de encargos, vencimientos y cumpleaños.
 
-## 3. Primeros pasos (hazlo antes de vender)
-
-### 3.1 Entrar por primera vez
-
-La primera vez que abres el programa en una computadora, te pide **crear tu
-usuario administrador**: escribes tu nombre, tu correo y una contraseña (dos
-veces) y entras directo. No hay un usuario ni una clave de fábrica.
-
-Esta pantalla **solo aparece una vez**: cuando actualices el programa a una
-versión nueva, tus datos y tu usuario se conservan y entras con el login de
-siempre. Solo se puede hacer desde la computadora donde está instalado, no
-desde el celular.
-
-### 3.2 Guarda bien tu clave
-
-Anótala en un lugar seguro: es con la que entrarás cada vez. Si más adelante
-quieres cambiarla: **Configuración** → **Cambiar mi clave**.
-
-### 3.3 Datos de tu negocio
-
-**Configuración** → **Datos del negocio**:
-
-- **Nombre** — aparece en el encabezado de todas las facturas
-- **Dirección**
-- **RNC / ID fiscal** — se imprime en la factura
-- **Tasa de impuesto** — se escribe en decimal: `0.18` significa 18%.
-  Si no cobras impuesto, pon `0`.
-- **Icono del negocio** — tu logo; sale en la factura y en el menú lateral
-
-Guarda los cambios. Esto define cómo se ve cada factura que emitas.
-
----
+Después, en este orden: proveedores → insumos → productos → recetas.
 
 ## 4. Usuarios y permisos
 
-Hay tres tipos de usuario. Se crean en **Configuración** → **Usuarios y roles**.
+**Configuración → Usuarios y roles → Agregar usuario.** Cada persona entra con
+su propio correo. Se puede cambiar el rol o desactivar a alguien cuando quieras.
 
-| Rol | Para quién | Qué puede hacer |
+| Rol | Para quién | Puede |
 |---|---|---|
-| **ADMIN** | El dueño | Todo, incluidos costos, ganancias y configuración |
-| **CAJERO** | Quien atiende | Vender, cobrar, ver clientes y ventas. **No ve costos ni ganancias** |
-| **CONTABILIDAD** | Contador | Reportes, gastos y cobros. No vende |
+| Administrador | Dueño | Todo, incluidos costos, márgenes, compras, reportes y configuración. |
+| Cajero | Mostrador | Vender, tomar y cobrar encargos, cobros y clientes. |
+| Repostero | Cocina | Inventario, recetas, producción y marcar encargos en producción / listos. No ve costos. |
+
+## 5. Inventario de insumos
+
+Insumos = todo lo que se gasta: harina, azúcar, huevos, mantequilla… y también
+materiales como cajas, bases de pastel o velas.
+
+- **Nuevo insumo:** nombre, tipo, **unidad de inventario** (kg, g, lb, L, ml,
+  unidad, docena…), stock mínimo, costo y la existencia actual con su fecha de
+  vencimiento. La unidad no se puede cambiar después de usarlo.
+- **Movimientos** (abre el insumo):
+  - *Entrada:* llegó mercancía sin factura (para compras usa Compras).
+  - *Salida:* se usó fuera de una receta.
+  - *Merma:* se dañó o venció. Sale en el reporte de mermas.
+  - *Ajuste:* escribe lo que contaste en el almacén; el sistema registra la diferencia.
+- Puedes escribir la cantidad en otra unidad de la misma medida (2 lb de un
+  insumo en kg). Peso, volumen y cantidad no se mezclan: 3 huevos no se
+  convierten a gramos.
+- Cada entrada es un **lote** con su vencimiento; al gastar se usa primero el
+  que vence antes.
+- **Alertas:** en rojo lo que está bajo el mínimo; con fecha lo que vence pronto.
+- **Lista de compras:** qué comprar para los encargos de los próximos días y
+  para volver al mínimo, con el proveedor de cada insumo.
+
+## 6. Recetas
 
-**Crea un usuario CAJERO para cada empleado.** Que no usen tu cuenta de
-administrador: así los costos y márgenes quedan reservados para ti, y la
-bitácora registra quién hizo cada cosa.
+- **Nueva receta:** nombre, cuánto rinde (ej. 1 unidad, 24 unidades, 1 docena),
+  porciones, tiempo, ingredientes con su cantidad y los pasos.
+- **Subrecetas:** rellenos, cremas, masas que se preparan aparte y se usan en
+  varias recetas. Márcala como *subreceta* y luego agrégala como ingrediente
+  (ej. 300 g de relleno de dulce de leche).
+- **Producto que produce:** elige el producto que sale de la receta; así la
+  producción suma existencia y el producto toma su costo.
+- El **costo** se calcula solo con el precio actual de los insumos: costo total,
+  por unidad y por porción, y el **precio sugerido** (costo + ganancia).
+  Cuando registras una compra más cara, los costos se actualizan solos.
+- **Escalar:** en la receta abierta escribe ×2, ×5… para ver las cantidades y
+  si alcanza el inventario.
 
-Cada quien puede cambiar su propia clave desde **Configuración**.
+## 7. Producción
 
----
+**Producción → Registrar producción:** receta y tandas. Antes de guardar se ve
+qué se va a descontar; si falta algo, no deja registrar. Al guardar:
 
-## 5. Productos
+- se descuentan los insumos (también los de las subrecetas);
+- se suma la existencia del producto.
 
-Aquí va tu catálogo de piezas. Menú **Productos** (solo ADMIN).
+Si te equivocaste, el administrador puede **anular** la producción.
 
-### Crear una pieza
+**Hoja de producción del día:** los encargos que se entregan ese día con toda
+la personalización (sabor, relleno, mensaje, foto) y cuántas tandas hacer
+descontando lo que ya está hecho. Se puede imprimir.
 
-**Nuevo producto** y llena:
+## 8. Productos
 
-- **Foto** — se explica más abajo
-- **Nombre** — ej. *Anillo oro 18k con zafiro*
-- **Precio** — a cuánto lo vendes
-- **Stock** — cuántas unidades tienes
-- **Costo de adquisición** — **cuánto te costó a ti**
+Pasteles, panes, bizcochos y postres listos para vender: precio, categoría,
+foto opcional y existencia. La existencia sube con la producción y baja con las
+ventas, las entregas de encargos y las mermas (**Registrar merma** en la tarjeta).
 
-> El **código (SKU)** se genera solo, a partir del nombre: *Anillo...* → `AN-0001`.
+## 9. Encargos
 
-### Sobre el costo
+**Encargos → Nuevo encargo:**
 
-El costo **solo lo ve el administrador**. Un cajero nunca lo verá, ni en la
-pantalla ni si husmea. Sirve para que el sistema calcule tu ganancia real en
-la sección **Costos**.
+1. Cliente (búscalo o créalo ahí mismo).
+2. Fecha y hora de entrega; retiro en tienda o a domicilio (dirección y costo de envío).
+3. Productos: del catálogo o "Personalizado". En **Personalizar**: tamaño,
+   sabor, relleno, decoración, mensaje escrito y foto de referencia.
+4. Anticipo (opcional) y forma de pago.
 
-Si lo llenas, cada ficha muestra una etiqueta de margen: verde si ganas más
-del 40%, ámbar entre 20% y 40%, rojo por debajo del 20%.
+Después, desde el encargo:
 
-### Sobre las fotos
+- **Ticket:** comprobante imprimible para el cliente.
+- **Estado:** Pendiente → En producción → Listo.
+- **Abonar:** registrar más pagos antes de la entrega.
+- **Entregar y cobrar:** se cobra el saldo y se crea la venta con su factura
+  (que se puede mandar por WhatsApp desde Ventas). Si el cliente no paga todo,
+  marca *dejar a crédito* y el saldo pasa a Cobros.
+- **Cancelar:** si ya pagó algo y se le devuelve, regístralo en Gastos.
 
-Arrastra la foto tal como salió del celular: **el programa la optimiza solo**
-(la reduce a 1200×1200 y la comprime de ~3 MB a ~80 KB, sin que se note).
+La vista **Calendario** muestra los encargos de cada día del mes. En el
+Dashboard salen los atrasados (en rojo), los de hoy y los próximos.
 
-Para que el catálogo se vea profesional:
+## 10. Punto de venta
 
-- Fondo neutro: blanco, gris claro o terciopelo oscuro
-- Luz de ventana, **no flash directo** (rebota feo en el metal y las piedras)
-- **El mismo fondo y ángulo en todas las piezas** — es lo que más se nota
+Toca los productos para agregarlos, ajusta cantidades, elige cliente (obligatorio
+a crédito), descuento y forma de pago, y **Cobrar**. Se genera la factura.
+El carrito se guarda solo si sales de la pantalla sin querer.
 
-La foto se recorta a cuadrado centrado, así que deja la pieza en el centro.
+## 11. Factura por WhatsApp
 
----
+Con WhatsApp Desktop abierto, **Enviar por WhatsApp** pone la factura en cola;
+el agente la pega en el chat del cliente en unos segundos. El estado (en cola,
+enviada, error) se ve en Ventas.
 
-## 6. Clientes
+## 12. Compras y proveedores
 
-Menú **Clientes**. Solo el **nombre** y el **teléfono** son obligatorios.
+- **Proveedores:** nombre, contacto, teléfono.
+- **Registrar compra:** proveedor, fecha, número de factura y cada línea con
+  insumo, cantidad, unidad, lo que pagaste y el vencimiento. Al guardar:
+  entra al inventario, se actualiza el costo del insumo y se registra en Gastos.
+- Se puede **anular** una compra mientras no se haya usado nada de ella.
 
-El teléfono importa: es a donde se envía la factura por WhatsApp. Escríbelo
-con el código del país, ej. `+1809...`.
+## 13. Clientes
 
-Al abrir un cliente ves su historial de compras y lo que debe.
+Ficha con teléfono, dirección, cumpleaños, fechas especiales y notas. Muestra
+deudas, compras y encargos del cliente. El Dashboard avisa de cumpleaños y
+fechas especiales próximas.
 
-> **Un cliente con ventas registradas no se puede borrar.** El sistema lo
-> impide a propósito: borrarlo eliminaría el rastro de facturas ya emitidas a
-> su nombre.
+## 14. Ventas, cobros y gastos
 
----
+- **Ventas:** historial, ver/reenviar factura, corregir o eliminar (solo
+  administrador, con su contraseña). Las ventas que vienen de un encargo no se
+  corrigen desde aquí.
+- **Cobros:** ventas a crédito con saldo, abonos y recordatorio por WhatsApp.
+- **Gastos:** renta, luz, sueldos… (las compras de insumos ya entran solas).
 
-## 7. Punto de venta
+## 15. Reportes
 
-Es la pantalla del día a día. Menú **Punto de venta**.
+Ventas por período, productos más vendidos, ganancia estimada (venta − costo de
+receta), mermas, insumos por agotarse, cuentas por cobrar (saldos de encargos y
+créditos), gastos y flujo de caja. **Transacciones** muestra todo el dinero que
+entró y salió, incluidos los anticipos.
 
-### Cobrar
+## 16. Respaldos
 
-1. **Busca la pieza** por nombre o código, y haz clic para agregarla
-2. Los productos ya agregados se marcan en **verde con la cantidad**, para que
-   no los agregues dos veces sin darte cuenta
-3. Si vendes algo que no está en el catálogo, usa **Agregar ítem manual**
-4. Elige el **método de pago**
-5. Si es **Crédito**, tienes que elegir un cliente y poner fecha límite
-6. Pulsa **Cobrar**
+Se hacen solos cada 3 días (y se copian a OneDrive si lo tienes). En
+**Configuración → Respaldos** puedes hacer uno al momento o restaurar uno
+anterior. Restaurar reemplaza todos los datos actuales.
 
-El sistema descuenta el inventario, genera la factura y —si el cliente tiene
-teléfono— la envía por WhatsApp.
+## 17. Actualizaciones
 
-### Si no hay stock
+Al abrir el programa busca versiones nuevas. Si hay una, la descarga y pregunta
+si instalarla ahora o la próxima vez. Tus datos no se tocan.
 
-El programa **no te deja** vender más piezas de las que tienes: avisa al
-agregarlas al carrito, no al final. Es a propósito: enterarte con el cliente
-enfrente es la peor forma de descubrirlo.
+## 18. Problemas comunes
 
-### Si te interrumpen
-
-**No pierdes la venta a medias.** Si sales de la pantalla por accidente, o
-incluso si se va la luz, al volver el carrito sigue ahí. Los borradores se
-guardan por 12 horas.
-
----
-
-## 8. Envío de facturas por WhatsApp
-
-### Cómo funciona
-
-El programa **no usa** ningún servicio de pago ni cobra por mensaje. Usa tu
-propio WhatsApp Desktop: prepara la factura y la pega en el chat del cliente.
-
-Para que funcione:
-
-1. **WhatsApp Desktop abierto y con sesión iniciada**
-2. El **agente** corriendo — se abre solo con el programa; verás un icono en
-   la bandeja del sistema (junto al reloj)
-
-### Enviar
-
-Al cobrar una venta con cliente y teléfono, se envía sola. También puedes
-reenviarla después desde **Ventas** → botón de WhatsApp.
-
-### Importante
-
-Mientras se envía, **no uses el mouse ni el teclado unos segundos**: el
-programa está controlando WhatsApp y escribiendo por ti. Si mueves cosas en
-medio, el envío puede fallar.
-
-Si algo no llega, el registro está en:
-`C:\temp\whatsapp_send\agent.log`
-
----
-
-## 9. Pedidos
-
-Para piezas que el cliente ya pagó (o encargó) pero **todavía no se lleva**:
-un anillo que hay que ajustar, una cadena por encargo, algo que se entrega la
-semana que viene.
-
-### Crear un pedido
-
-Al cobrar en el punto de venta, marca **"Es un pedido por entregar"** y ponle
-fecha de entrega.
-
-### Estados
-
-**Pendiente** → **Empacado** → **Entregado**
-
-Al marcarlo **Entregado**, el pedido desaparece del listado y la factura queda
-como el registro de esa venta. Pide confirmación porque no se puede deshacer.
-
-### En el Dashboard
-
-Los pedidos aparecen **arriba de todo** en la pantalla principal. Si hay
-alguno atrasado, **el bloque completo se pone rojo**. Así lo ves sin tener que
-leer: son compromisos con clientes que están esperando.
-
----
-
-## 10. Ventas: corregir y eliminar facturas
-
-Menú **Ventas**: el historial completo. Haz clic en cualquiera para ver el
-detalle.
-
-Solo el **administrador** puede corregir o eliminar, y en ambos casos hay que
-**volver a escribir la clave** aunque la sesión esté abierta. No es un
-capricho: mueve inventario, reportes y posiblemente una deuda.
-
-### Corregir (✏️)
-
-Para errores de digitación: cantidad o precio equivocado, una línea de más.
-Las piezas que quites **vuelven al inventario** y la factura se regenera.
-
-### Eliminar (🗑️)
-
-Borra la venta completa. Antes de confirmar, te muestra exactamente qué
-piezas vuelven al inventario.
-
-> **No se puede eliminar una factura con abonos registrados.** El sistema lo
-> impide: haría desaparecer el rastro de dinero que el cliente ya entregó. Si
-> de verdad hay que corregirla, usa la opción de corregir.
-
-**Cuándo usar cada una:** si te equivocaste al digitar hoy, corrige. Si el
-cliente devolvió la pieza la semana pasada, no borres la factura — eso
-reescribe la historia y descuadra el reporte de aquel día.
-
----
-
-## 11. Cobros
-
-Menú **Cobros**: todo lo que te deben las ventas a crédito.
-
-- **Registrar abono** — cuando el cliente da algo a cuenta. La factura se
-  regenera con el saldo actualizado.
-- **Recordatorio por WhatsApp** — envía la factura con el saldo pendiente.
-
-### Estados
-
-| Estado | Significa |
+| Problema | Qué hacer |
 |---|---|
-| Pendiente | Sin abonos aún |
-| Abono parcial | Ya dio algo a cuenta |
-| Vencida | Pasó la fecha límite |
-| Pagada | Saldada |
-
-Una deuda vencida **sigue marcada como vencida** aunque el cliente abone algo,
-mientras quede saldo. Así no se te pierde de vista.
-
----
-
-## 12. Gastos
-
-Menú **Gastos** (ADMIN y CONTABILIDAD). Registra lo que sale: alquiler,
-suministros, publicidad, transporte.
-
-Sirve para que el reporte de **flujo de caja** muestre tu situación real, no
-solo lo que entró.
-
----
-
-## 13. Reportes
-
-Menú **Reportes** (ADMIN y CONTABILIDAD).
-
-- **Ingresos, egresos y flujo neto** del período
-- **Ventas por período** — día, semana, mes o año
-- **Clientes con deudas**
-- **Gastos por categoría**
-- **Exportar a CSV** para abrirlo en Excel
-
-El rango de fechas se recuerda al navegar a otra pantalla y volver.
-
----
-
-## 14. Costos (solo administrador)
-
-Menú **Costos**. Es la pantalla de tu ganancia real, y **ningún cajero la ve**.
-
-Muestra, por período:
-
-- **Ingresos** — lo que vendiste
-- **Costo** — lo que te costaron esas piezas
-- **Utilidad** — lo que ganaste de verdad
-- **Margen %**
-
-Y el desglose pieza por pieza, ordenado de más a menos rentable.
-
-> Usa el costo **del momento de la venta**, no el actual. Si mañana te cambia
-> el precio del proveedor, tus ganancias del mes pasado no se distorsionan.
-
-Para que esto funcione, llena el **costo de adquisición** de cada producto.
-
----
-
-## 15. Respaldos
-
-### Automático
-
-Cada 3 días el programa guarda una copia completa (base de datos y fotos) y
-**la sube sola a tu OneDrive**, en `OneDrive\CafeShopping\Respaldos`.
-
-Esto es importante: si el disco falla, lo roban o entra un virus, **tus datos
-siguen existiendo fuera de la computadora**. Es la diferencia entre un mal día
-y perder el negocio.
-
-Se conservan 30 días en la computadora y no se borran de OneDrive.
-
-### Manual
-
-**Configuración** → **Respaldos** → **Generar respaldo ahora**. Hazlo antes de
-cualquier cosa arriesgada.
-
-### Restaurar
-
-Desde la misma pantalla, eligiendo un respaldo de la lista.
-
-> **Restaurar reemplaza todo por lo que había ese día.** Las ventas
-> registradas después se pierden. Úsalo solo si algo salió realmente mal.
-
-### Dónde están tus datos
-
-En `%APPDATA%\cafe-shopping-desktop\datos`. Ahí vive todo: base de datos,
-fotos y facturas. Está fuera de la carpeta del programa a propósito, para que
-las actualizaciones no se lleven nada por delante.
-
-Si quieres una copia manual, copia esa carpeta completa a un USB.
-
----
-
-## 16. Problemas comunes
-
-### La aplicación no abre / se queda cargando
-
-Ciérrala del todo y ábrela otra vez. Si dice que ya está abierta, busca la
-ventana en la barra de tareas: solo permite una a la vez a propósito.
-
-### La factura no llegó por WhatsApp
-
-Revisa, en este orden:
-
-1. ¿WhatsApp Desktop está abierto y con la sesión iniciada?
-2. ¿El cliente tiene el teléfono bien escrito, con código de país?
-3. ¿El agente está corriendo? (icono en la bandeja, junto al reloj)
-4. Mira `C:\temp\whatsapp_send\agent.log` — dice qué pasó
-
-Puedes reenviarla desde **Ventas** sin volver a cobrar.
-
-### No me deja vender una pieza
-
-Dice cuántas quedan. Si el número no cuadra con lo que ves en la vitrina,
-corrígelo en **Productos** editando el stock.
-
-### No me deja borrar un cliente
-
-Tiene ventas o deudas registradas. Es a propósito: borrarlo eliminaría el
-rastro de sus facturas.
-
-### No veo Costos, Productos o Configuración
-
-Estás entrando como CAJERO. Esas secciones son solo del administrador.
-
-### Se me olvidó la clave
-
-Si es de un empleado, entra como administrador, crea un usuario nuevo y
-desactiva el anterior.
-
-Si es la del administrador y no hay otro administrador activo, no hay forma de
-recuperarla desde el programa: hay que restaurar un respaldo anterior al
-cambio, o pedir ayuda técnica.
-
-**Por eso conviene tener dos usuarios administradores**, uno de respaldo.
-
----
-
-## Resumen de lo que no debes olvidar
-
-1. **Cambia la clave inicial** antes de la primera venta
-2. **Un usuario propio para cada empleado**, nunca el tuyo
-3. **Llena el costo** de cada producto, o la sección Costos no sirve
-4. **Ten WhatsApp Desktop abierto** mientras factures
-5. **Revisa de vez en cuando** que los respaldos lleguen a OneDrive
-6. **No borres facturas viejas** para arreglar devoluciones — descuadra los
-   reportes de aquel día
+| "No hay suficiente … para esta producción" | Registra la compra o un ajuste de inventario, o baja las tandas. |
+| "No se puede convertir … son medidas distintas" | Usa una unidad de la misma medida que el insumo (peso con peso, volumen con volumen, cantidad con cantidad). |
+| La factura no llega por WhatsApp | Abre WhatsApp Desktop con la sesión iniciada y reintenta desde Ventas. |
+| "Parece que Pastelería María ya está abierta" | Cierra la otra ventana; si no ves ninguna, reinicia la PC. |
+| Olvidé la contraseña | Otro administrador puede crearte un usuario nuevo. |

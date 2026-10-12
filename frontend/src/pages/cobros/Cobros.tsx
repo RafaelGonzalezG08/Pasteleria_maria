@@ -72,7 +72,7 @@ export default function Cobros() {
         <EmptyState title="Sin cuentas en esta vista" description="No hay clientes con saldo en este filtro." />
       ) : (
         <>
-          {/* Celular: tarjetas. El detalle completo (abonos, factura) vive en DebtDetailModal. */}
+          {/* Ventana angosta: tarjetas. El detalle completo (abonos, factura) vive en DebtDetailModal. */}
           <div className="space-y-2 md:hidden">
             {debts.map((debt) => {
               const total = Number(debt.amountTotal ?? 0);

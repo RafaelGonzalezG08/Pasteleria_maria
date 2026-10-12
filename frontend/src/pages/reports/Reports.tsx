@@ -213,7 +213,7 @@ export default function Reports() {
           >
             {formatMoney(cashflow?.saldoEnCaja ?? 0)}
           </p>
-          <p className="mt-0.5 text-[11px] text-muted">Contado + abonos cobrados &minus; gastos</p>
+          <p className="mt-0.5 text-[11px] text-muted">Contado + abonos + anticipos &minus; gastos</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs font-medium uppercase text-muted">Balance total</p>

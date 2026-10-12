@@ -64,7 +64,7 @@ export default function Sales() {
         <EmptyState title="Sin ventas en este rango" description="Registra una venta desde el Punto de venta." />
       ) : (
         <>
-          {/* Celular: tarjetas. El detalle completo (items, factura) vive en SaleDetailModal. */}
+          {/* Ventana angosta: tarjetas. El detalle completo (items, factura) vive en SaleDetailModal. */}
           <div className="space-y-2 md:hidden">
             {sales.map((sale) => (
               <Card

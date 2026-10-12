@@ -86,7 +86,7 @@ export default function Costs() {
           />
         ) : (
           <>
-            {/* Celular: tarjetas, con todos los numeros -- es un reporte de solo lectura, no hace falta un panel aparte. */}
+            {/* Ventana angosta: tarjetas, con todos los numeros -- es un reporte de solo lectura, no hace falta un panel aparte. */}
             <div className="space-y-2 md:hidden">
               {productos.map((p) => (
                 <div key={p.productId ?? p.nombre} className="rounded-lg border border-porcelain-200 p-3">

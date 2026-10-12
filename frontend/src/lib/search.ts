@@ -1,7 +1,7 @@
 /**
- * Busqueda por palabras sueltas, sin importar el orden: "anillo verde"
- * encuentra "Anillo Piedra Verde" aunque "verde" no vaya pegado a "anillo".
- * Antes se buscaba la frase completa tal cual ("anillo verde" como texto
+ * Busqueda por palabras sueltas, sin importar el orden: "pastel fresa"
+ * encuentra "Pastel de chocolate y fresa" aunque "fresa" no vaya pegado a "pastel".
+ * Antes se buscaba la frase completa tal cual ("pastel fresa" como texto
  * seguido), asi que cualquier palabra de mas entre medio hacia fallar la
  * busqueda.
  *

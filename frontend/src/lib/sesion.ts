@@ -2,8 +2,8 @@
  * Reglas de la sesion: se pide la contraseña cada vez que se abre la app y
  * tras 30 minutos sin tocarla, aunque siga abierta. El correo se recuerda
  * (localStorage, sobrevive a cerrar la app); el token y la hora de la ultima
- * actividad NO (sessionStorage: se borran al cerrar la ventana / la app del
- * celular, que es justo lo que se busca).
+ * actividad NO (sessionStorage: se borran al cerrar la app, que es justo lo
+ * que se busca).
  */
 export const MINUTOS_INACTIVIDAD = 30;
 const LIMITE_MS = MINUTOS_INACTIVIDAD * 60_000;

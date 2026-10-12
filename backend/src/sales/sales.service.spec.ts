@@ -126,11 +126,11 @@ describe('SalesService.validarReferencias', () => {
     await expect(
       (svc as any).validarReferencias({
         items: [
-          { productId: 'vive', descripcion: 'Anillo vivo' },
-          { productId: 'muerto', descripcion: 'Anillo borrado' },
+          { productId: 'vive', descripcion: 'Pastel vivo' },
+          { productId: 'muerto', descripcion: 'Pastel borrado' },
         ],
       }),
-    ).rejects.toThrow(/Anillo borrado/);
+    ).rejects.toThrow(/Pastel borrado/);
   });
 
   it('acepta cuando todos los productos existen', async () => {
