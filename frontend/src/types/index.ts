@@ -74,6 +74,12 @@ export interface Product {
   categoriaId?: string | null;
   categoria?: { id: string; nombre: string } | null;
   receta?: { id: string; nombre: string } | null;
+  /** Venta por porcion: este producto es una porcion de `porcionDe`. */
+  porcionDeId?: string | null;
+  porcionesPorUnidad?: number | null;
+  porcionDe?: { id: string; nombre: string; stock: number } | null;
+  /** Productos que son porciones de este (si se vende tambien por pedazo). */
+  porciones?: { id: string; nombre: string; porcionesPorUnidad: number | null }[];
 }
 
 export interface Category {

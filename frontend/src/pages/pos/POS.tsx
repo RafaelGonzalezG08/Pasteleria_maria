@@ -95,7 +95,33 @@ export default function POS() {
   // Picar un producto del catalogo lo agrega; picar el mismo producto de nuevo lo
   // QUITA del carrito (toggle), en vez de sumarle cantidad -- para subir la
   // cantidad de algo que ya esta en el carrito estan los botones +/- de ahi.
+  /**
+   * Porcion agotada pero con pasteles enteros en vitrina: en vez de solo
+   * decir "sin stock", se ofrece cortar uno ahi mismo (es lo que la cajera
+   * haria fisicamente) y se agrega la porcion al carrito.
+   */
+  async function cortarYAgregar(product: Product) {
+    const entero = product.porcionDe!;
+    const ok = window.confirm(
+      `No quedan "${product.nombre}". ¿Cortar 1 "${entero.nombre}" en ${product.porcionesPorUnidad} porciones?`,
+    );
+    if (!ok) return;
+    try {
+      const actualizado = await productsApi.cortar(product.id, 1);
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success(`Cortado: ahora hay ${actualizado.stock} "${actualizado.nombre}".`);
+      toggleProduct({ ...product, stock: actualizado.stock });
+    } catch {
+      // El interceptor ya mostro el error.
+    }
+  }
+
   function toggleProduct(product: Product) {
+    const yaEsta = cart.some((l) => l.productId === product.id);
+    if (!yaEsta && product.stock < 1 && product.porcionDe && product.porcionDe.stock > 0) {
+      void cortarYAgregar(product);
+      return;
+    }
     setCart((prev) => {
       const existing = prev.find((l) => l.productId === product.id);
       if (existing) {

@@ -499,6 +499,63 @@ describe('AppModule (e2e)', () => {
       expect(rep.body.totales.costoInsumos).toBeGreaterThan(0);
     });
 
+    it('vender por porción: cortar un entero baja el pastel y sube las porciones', async () => {
+      // Quedan 2 pasteles enteros (4 producidos - 2 entregados).
+      const porcion = await auth(api().post('/api/products')).send({
+        nombre: `Porcion e2e ${Date.now()}`,
+        precioUnitario: 150,
+        stock: 0,
+        porcionDeId: productoId,
+        porcionesPorUnidad: 8,
+      });
+      expect(porcion.status).toBe(201);
+      expect(porcion.body.porcionDe.id).toBe(productoId);
+
+      const corte = await auth(api().post(`/api/products/${porcion.body.id}/cortar`)).send({
+        enteros: 1,
+      });
+      expect(corte.status).toBe(201);
+      expect(corte.body.stock).toBe(8);
+      // Costo del entero (26) entre 8 porciones.
+      expect(Number(corte.body.costoUnitario)).toBeCloseTo(3.25, 2);
+      expect((await prisma.product.findUnique({ where: { id: productoId } }))!.stock).toBe(1);
+
+      const demasiado = await auth(api().post(`/api/products/${porcion.body.id}/cortar`)).send({
+        enteros: 5,
+      });
+      expect(demasiado.status).toBe(400);
+
+      // Se vende una porcion como cualquier producto.
+      const venta = await auth(api().post('/api/sales')).send({
+        metodoPago: 'EFECTIVO',
+        generarFactura: false,
+        items: [
+          { productId: porcion.body.id, descripcion: 'Porcion', cantidad: 3, precioUnitario: 150 },
+        ],
+      });
+      expect(venta.status).toBe(201);
+      expect((await prisma.product.findUnique({ where: { id: porcion.body.id } }))!.stock).toBe(5);
+
+      // Tambien se puede producir la receta directamente en porciones:
+      // 1 tanda = 2 pasteles = 16 porciones, sin tocar la existencia de enteros.
+      const enPorciones = await auth(api().post('/api/produccion')).send({
+        recetaId,
+        tandas: 1,
+        porcionId: porcion.body.id,
+      });
+      expect(enPorciones.status).toBe(201);
+      expect(enPorciones.body.unidadesProducidas).toBe(16);
+      expect((await prisma.product.findUnique({ where: { id: porcion.body.id } }))!.stock).toBe(21);
+      expect((await prisma.product.findUnique({ where: { id: productoId } }))!.stock).toBe(1);
+
+      // Una porcion no puede ser porcion de si misma ni de otra porcion.
+      const ciclo = await auth(api().put(`/api/products/${porcion.body.id}`)).send({
+        porcionDeId: porcion.body.id,
+        porcionesPorUnidad: 8,
+      });
+      expect(ciclo.status).toBe(400);
+    });
+
     it('la lista de compras y la hoja de producción salen de los encargos', async () => {
       const lista = await auth(api().get('/api/produccion/lista-compras?dias=7'));
       expect(lista.status).toBe(200);

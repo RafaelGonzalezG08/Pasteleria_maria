@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { CakeSlice, Factory, Loader2, Printer, Undo2 } from 'lucide-react';
 import { produccionApi, recetasApi } from '../../api/inventario.api';
+import { productsApi } from '../../api/products.api';
 import { encargosApi } from '../../api/encargos.api';
 import { urlArchivo } from '../../lib/api';
 import {
@@ -18,7 +19,7 @@ import {
 } from '../../lib/format';
 import { useAuthStore } from '../../store/auth.store';
 import { Badge, Button, Card, EmptyState, Field, INPUT, PageHeader, Select, Skeleton, Tabs } from '../../components/ui';
-import type { HojaProduccion, Produccion as ProduccionT, RecetaEscalada, RecetaResumen } from '../../types';
+import type { HojaProduccion, Product, Produccion as ProduccionT, RecetaEscalada, RecetaResumen } from '../../types';
 
 type Pestana = 'REGISTRAR' | 'HOJA';
 
@@ -58,6 +59,9 @@ function Registrar() {
   const [recetaId, setRecetaId] = useState(params.get('receta') ?? '');
   const [tandas, setTandas] = useState(params.get('tandas') ?? '1');
   const [notas, setNotas] = useState('');
+  // '' = sale como enteros; si no, el id del producto "porcion" en que sale.
+  const [porcionId, setPorcionId] = useState('');
+  const { data: productos = [] } = useQuery<Product[]>({ queryKey: ['products'], queryFn: () => productsApi.list() });
   const [desde, setDesde] = useState(fechaLocal());
   const [hasta, setHasta] = useState(fechaLocal());
 
@@ -90,7 +94,8 @@ function Registrar() {
   }
 
   const registrar = useMutation({
-    mutationFn: () => produccionApi.registrar({ recetaId, tandas: tandasNum, notas: notas || undefined }),
+    mutationFn: () =>
+      produccionApi.registrar({ recetaId, tandas: tandasNum, notas: notas || undefined, porcionId: porcionId || undefined }),
     onSuccess: (p) => {
       toast.success(
         p.unidadesProducidas > 0
@@ -111,10 +116,19 @@ function Registrar() {
   });
 
   const faltantes = vistaPrevia?.insumos.filter((i) => i.faltante > 0) ?? [];
-  const unidades =
+  // Porciones en que se puede vender el producto de esta receta.
+  const porcionesDelProducto = productos.filter((p) => receta?.producto && p.porcionDeId === receta.producto.id);
+  const porcionElegida = porcionesDelProducto.find((p) => p.id === porcionId);
+  const enteros =
     receta && receta.producto && vistaPrevia
-      ? Math.floor(vistaPrevia.rendimiento * (receta.unidadRendimiento === 'docena' ? 12 : 1) + 1e-6)
+      ? vistaPrevia.rendimiento * (receta.unidadRendimiento === 'docena' ? 12 : 1)
       : null;
+  const unidades =
+    enteros === null ? null : Math.floor(enteros * (porcionElegida?.porcionesPorUnidad ?? 1) + 1e-6);
+  const nombreDestino = porcionElegida?.nombre ?? receta?.producto?.nombre;
+
+  // Al cambiar de receta, lo que sale vuelve a ser "enteros".
+  useEffect(() => setPorcionId(''), [recetaId]);
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
@@ -188,6 +202,21 @@ function Registrar() {
             >
               <input type="number" min="0.1" step="any" value={tandas} onChange={(e) => setTandas(e.target.value)} className={INPUT} />
             </Field>
+            {porcionesDelProducto.length > 0 && receta?.producto && (
+              <Field label="Sale como" ayuda="Enteros van a la existencia del pastel; porciones, directo a la de sus pedazos.">
+                <Select
+                  value={porcionId}
+                  onChange={setPorcionId}
+                  options={[
+                    { value: '', label: `Enteros (${receta.producto.nombre})` },
+                    ...porcionesDelProducto.map((p) => ({
+                      value: p.id,
+                      label: `Porciones: ${p.nombre} (${p.porcionesPorUnidad} por entero)`,
+                    })),
+                  ]}
+                />
+              </Field>
+            )}
             <Field label="Notas">
               <input value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Opcional" className={INPUT} />
             </Field>
@@ -196,7 +225,7 @@ function Registrar() {
               <div className="rounded-lg p-3 text-xs shadow-neu-inset">
                 <p className="mb-1 font-semibold text-ink">
                   Sale: {formatCantidad(vistaPrevia.rendimiento)} {vistaPrevia.unidadRendimiento}
-                  {unidades !== null && receta?.producto ? ` → +${unidades} ${receta.producto.nombre}` : ''}
+                  {unidades !== null && nombreDestino ? ` → +${unidades} ${nombreDestino}` : ''}
                 </p>
                 <p className="mb-1 text-muted">Se descuenta:</p>
                 <ul className="space-y-0.5">

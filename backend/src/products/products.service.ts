@@ -16,6 +16,14 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { MermaProductoDto } from './dto/merma-producto.dto';
 
+/** Lo que la interfaz necesita de cada producto (categoria, receta y venta por porcion). */
+const INCLUDE_PRODUCTO = {
+  categoria: { select: { id: true, nombre: true } },
+  receta: { select: { id: true, nombre: true } },
+  porcionDe: { select: { id: true, nombre: true, stock: true } },
+  porciones: { select: { id: true, nombre: true, porcionesPorUnidad: true } },
+} as const;
+
 @Injectable()
 export class ProductsService {
   constructor(
@@ -52,20 +60,14 @@ export class ProductsService {
     return this.prisma.product.findMany({
       where: onlyActive ? { activo: true } : undefined,
       orderBy: { nombre: 'asc' },
-      include: {
-        categoria: { select: { id: true, nombre: true } },
-        receta: { select: { id: true, nombre: true } },
-      },
+      include: INCLUDE_PRODUCTO,
     });
   }
 
   async findOne(id: string) {
     const product = await this.prisma.product.findUnique({
       where: { id },
-      include: {
-        categoria: { select: { id: true, nombre: true } },
-        receta: { select: { id: true, nombre: true } },
-      },
+      include: INCLUDE_PRODUCTO,
     });
     if (!product) throw new NotFoundException('Producto no encontrado.');
     return product;
@@ -76,9 +78,10 @@ export class ProductsService {
 
     const existing = await this.prisma.product.findUnique({ where: { sku } });
     if (existing) throw new ConflictException('Ya existe un producto con ese codigo.');
+    const porcion = await this.datosPorcion(dto);
 
     const product = await this.prisma.product.create({
-      data: { ...dto, categoriaId: dto.categoriaId || null, sku },
+      data: { ...dto, ...porcion, categoriaId: dto.categoriaId || null, sku },
     });
     await this.audit.log('Product', product.id, 'CREATE', userId, { ...dto, sku } as any);
     return this.findOne(product.id);
@@ -117,6 +120,7 @@ export class ProductsService {
 
   async update(id: string, dto: UpdateProductDto, userId?: string) {
     await this.findOne(id);
+    const porcion = await this.datosPorcion(dto, id);
     if (dto.sku !== undefined) {
       const sku = dto.sku.trim();
       const otro = await this.prisma.product.findUnique({ where: { sku } });
@@ -128,11 +132,110 @@ export class ProductsService {
       where: { id },
       data: {
         ...dto,
+        ...porcion,
         ...(dto.categoriaId !== undefined ? { categoriaId: dto.categoriaId || null } : {}),
       },
     });
     await this.audit.log('Product', id, 'UPDATE', userId, dto as any);
     return this.findOne(id);
+  }
+
+  /**
+   * Valida y normaliza la configuracion de "venta por porcion". Solo se toca
+   * si el formulario la manda (undefined = no cambiar). Una porcion no puede
+   * ser porcion de si misma ni de otra porcion (cortar una porcion en
+   * porciones no tiene sentido y abriria cadenas raras de existencia).
+   */
+  private async datosPorcion(
+    dto: { porcionDeId?: string | null; porcionesPorUnidad?: number | null },
+    id?: string,
+  ): Promise<{
+    porcionDeId?: string | null;
+    porcionesPorUnidad?: number | null;
+    costoUnitario?: number;
+  }> {
+    if (dto.porcionDeId === undefined) {
+      delete dto.porcionesPorUnidad;
+      return {};
+    }
+    const porcionDeId = dto.porcionDeId || null;
+    delete dto.porcionDeId;
+    const porciones = dto.porcionesPorUnidad ?? null;
+    delete dto.porcionesPorUnidad;
+    if (!porcionDeId) return { porcionDeId: null, porcionesPorUnidad: null };
+
+    if (porcionDeId === id) {
+      throw new BadRequestException('Un producto no puede ser porcion de si mismo.');
+    }
+    const entero = await this.prisma.product.findUnique({ where: { id: porcionDeId } });
+    if (!entero) throw new NotFoundException('El producto entero elegido ya no existe.');
+    if (entero.porcionDeId) {
+      throw new BadRequestException(
+        `"${entero.nombre}" ya es una porcion; elige el producto entero.`,
+      );
+    }
+    if (id && (await this.prisma.product.count({ where: { porcionDeId: id } })) > 0) {
+      throw new BadRequestException(
+        'Este producto ya se vende por porciones (otro producto es porcion de el); no puede ser porcion a su vez.',
+      );
+    }
+    if (!porciones || porciones < 2) {
+      throw new BadRequestException('Indica cuantas porciones salen de cada entero (al menos 2).');
+    }
+    // El costo de la porcion sale del entero (no del formulario): asi la
+    // ganancia por pedazo es real desde la primera venta.
+    return {
+      porcionDeId,
+      porcionesPorUnidad: porciones,
+      costoUnitario: Math.round((Number(entero.costoUnitario) / porciones) * 100) / 100,
+    };
+  }
+
+  /**
+   * Corta `enteros` unidades del producto entero en porciones: baja la
+   * existencia del entero y sube la de la porcion. La porcion toma como costo
+   * el del entero dividido entre las porciones, para que la ganancia de cada
+   * porcion vendida sea la real.
+   */
+  async cortar(porcionId: string, enteros: number, userId?: string) {
+    const porcion = await this.findOne(porcionId);
+    if (!porcion.porcionDeId || !porcion.porcionesPorUnidad) {
+      throw new BadRequestException(
+        `"${porcion.nombre}" no esta configurado como porcion de otro producto.`,
+      );
+    }
+    const porciones = porcion.porcionesPorUnidad;
+    await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.product.updateMany({
+        where: { id: porcion.porcionDeId as string, stock: { gte: enteros } },
+        data: { stock: { decrement: enteros } },
+      });
+      if (count === 0) {
+        const entero = await tx.product.findUnique({
+          where: { id: porcion.porcionDeId as string },
+        });
+        throw new BadRequestException(
+          `Solo hay ${entero?.stock ?? 0} "${entero?.nombre ?? 'entero'}" en existencia; no se pueden cortar ${enteros}.`,
+        );
+      }
+      const entero = await tx.product.findUniqueOrThrow({
+        where: { id: porcion.porcionDeId as string },
+      });
+      await tx.product.update({
+        where: { id: porcionId },
+        data: {
+          stock: { increment: enteros * porciones },
+          costoUnitario: Math.round((Number(entero.costoUnitario) / porciones) * 100) / 100,
+        },
+      });
+    });
+    await this.audit.log('Product', porcionId, 'UPDATE', userId, {
+      accion: 'cortar-en-porciones',
+      enteroId: porcion.porcionDeId,
+      enteros,
+      porciones: enteros * porciones,
+    });
+    return this.findOne(porcionId);
   }
 
   async remove(id: string, userId?: string) {

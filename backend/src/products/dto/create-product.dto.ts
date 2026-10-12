@@ -60,6 +60,22 @@ export class CreateProductDto {
   descripcion?: string;
 
   /**
+   * Venta por porcion: el producto entero del que sale esta porcion (vacio =
+   * se vende entero). Llega como texto porque el formulario es multipart.
+   */
+  @ApiPropertyOptional({ description: 'Producto entero del que esta es una porcion.' })
+  @IsOptional()
+  @IsString()
+  porcionDeId?: string | null;
+
+  @ApiPropertyOptional({ example: 16, description: 'Cuantas porciones salen de cada entero.' })
+  @IsOptional()
+  @Transform(({ value }) => (value === '' || value === null ? null : Number(value)))
+  @IsInt({ message: 'Las porciones por entero deben ser un numero entero.' })
+  @Min(2, { message: 'Un entero debe dar al menos 2 porciones.' })
+  porcionesPorUnidad?: number | null;
+
+  /**
    * Producto dado de baja (`false`) o vigente (`true`). El formulario viaja
    * como multipart (lleva la foto), donde TODO llega como texto: sin el
    * Transform, "false" seria un string truthy.

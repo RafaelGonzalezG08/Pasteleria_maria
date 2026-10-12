@@ -8,6 +8,9 @@ export type ProductFormValues = {
   stock: string;
   categoriaId: string;
   descripcion: string;
+  /** Venta por porcion: id del producto entero ('' = se vende entero). */
+  porcionDeId: string;
+  porcionesPorUnidad: string;
   file: File | null;
 };
 
@@ -19,6 +22,9 @@ function buildFormData(values: ProductFormValues, incluirCosto: boolean) {
   formData.append('stock', String(Number(values.stock) || 0));
   formData.append('categoriaId', values.categoriaId);
   formData.append('descripcion', values.descripcion.trim());
+  // `?? ''`: un borrador guardado antes de existir estos campos no los trae.
+  formData.append('porcionDeId', values.porcionDeId ?? '');
+  formData.append('porcionesPorUnidad', values.porcionDeId ? (values.porcionesPorUnidad ?? '') : '');
   if (values.file) formData.append('file', values.file);
   return formData;
 }
@@ -54,6 +60,8 @@ export const productsApi = {
   delete: (id: string) => api.delete(`/products/${id}`).then((r) => r.data),
   restore: (id: string) => api.put(`/products/${id}`, { activo: true }).then((r) => r.data),
   quitarFoto: (id: string) => api.delete(`/products/${id}/photo`).then((r) => r.data),
+  /** Corta `enteros` del producto entero en porciones de este producto. */
+  cortar: (id: string, enteros: number) => api.post<Product>(`/products/${id}/cortar`, { enteros }).then((r) => r.data),
   merma: (id: string, cantidad: number, motivo?: string) =>
     api.post<Product>(`/products/${id}/merma`, { cantidad, motivo }).then((r) => r.data),
   mermas: (params: { from?: string; to?: string }) =>

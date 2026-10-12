@@ -50,17 +50,53 @@ export class MigrationsService {
       // medias hay referencias temporalmente rotas que si no reventarian.
       // (Prisma mete tambien `PRAGMA foreign_keys=OFF`, pero eso es un no-op
       // dentro de una transaccion; por eso ademas se hace aqui.)
-      await this.prisma.$transaction(
-        async (tx) => {
-          await tx.$executeRawUnsafe('PRAGMA defer_foreign_keys = ON');
-          for (const sentencia of this.splitStatements(sql)) {
-            if (/^PRAGMA\s/i.test(sentencia)) continue; // ya se maneja aqui
-            await tx.$executeRawUnsafe(sentencia);
-          }
-          await this.registrar(tx, nombre, sql);
-        },
-        { timeout: 120_000, maxWait: 15_000 },
-      );
+      //
+      // OJO con las que recrean una tabla PADRE (ej. products): con las
+      // llaves foraneas activas, el DROP TABLE dispara los ON DELETE de las
+      // tablas que la referencian -- SET NULL borro el producto de recetas,
+      // producciones y lineas de venta, y CASCADE habria borrado filas. Paso
+      // en una base de prueba. Por eso, si la migracion tiene DROP TABLE, se
+      // apagan las llaves foraneas ANTES de la transaccion (dentro es un
+      // no-op), se confirma adentro que de verdad quedaron apagadas (si no,
+      // se aborta sin tocar nada) y al final se revisa que no quede ninguna
+      // referencia rota.
+      const recreaTablas = /\bDROP\s+TABLE\b/i.test(sql);
+      if (recreaTablas) await this.prisma.$executeRawUnsafe('PRAGMA foreign_keys = OFF');
+      try {
+        await this.prisma.$transaction(
+          async (tx) => {
+            if (recreaTablas) {
+              const [estado] =
+                await tx.$queryRawUnsafe<{ foreign_keys: number | bigint }[]>(
+                  'PRAGMA foreign_keys',
+                );
+              if (Number(estado?.foreign_keys) !== 0) {
+                throw new Error(
+                  `La migracion ${nombre} recrea tablas y no se pudieron apagar las llaves foraneas; ` +
+                    'se aborta para no borrar datos relacionados.',
+                );
+              }
+            }
+            await tx.$executeRawUnsafe('PRAGMA defer_foreign_keys = ON');
+            for (const sentencia of this.splitStatements(sql)) {
+              if (/^PRAGMA\s/i.test(sentencia)) continue; // ya se maneja aqui
+              await tx.$executeRawUnsafe(sentencia);
+            }
+            if (recreaTablas) {
+              const rotas = await tx.$queryRawUnsafe<unknown[]>('PRAGMA foreign_key_check');
+              if (rotas.length > 0) {
+                throw new Error(
+                  `La migracion ${nombre} dejaria ${rotas.length} referencia(s) rota(s); se deshace.`,
+                );
+              }
+            }
+            await this.registrar(tx, nombre, sql);
+          },
+          { timeout: 120_000, maxWait: 15_000 },
+        );
+      } finally {
+        if (recreaTablas) await this.prisma.$executeRawUnsafe('PRAGMA foreign_keys = ON');
+      }
 
       nuevas += 1;
     }

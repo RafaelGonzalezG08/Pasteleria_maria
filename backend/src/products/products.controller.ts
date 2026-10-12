@@ -21,6 +21,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { BulkProductsDto } from './dto/bulk-products.dto';
 import { MermaProductoDto } from './dto/merma-producto.dto';
+import { CortarPorcionesDto } from './dto/cortar-porciones.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -154,6 +155,18 @@ export class ProductsController {
   @Roles(Role.ADMIN)
   quitarFoto(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.productsService.quitarFoto(id, user.userId);
+  }
+
+  /** Cortar pasteles enteros en porciones (sube la existencia de esta porcion). */
+  @Post(':id/cortar')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN, Role.CAJERO, Role.REPOSTERO)
+  async cortar(
+    @Param('id') id: string,
+    @Body() dto: CortarPorcionesDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return segunRol(await this.productsService.cortar(id, dto.enteros, user.userId), user.role);
   }
 
   /** Dar de baja producto terminado que se boto (vencido, dañado...). */

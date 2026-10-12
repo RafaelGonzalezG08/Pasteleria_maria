@@ -90,6 +90,14 @@ cd frontend && npm run lint && npm run build
 
 ## Trampas conocidas
 
+- **Migraciones que recrean una tabla padre** (patrón `RedefineTables` de
+  Prisma: `DROP TABLE` + `CREATE` + `RENAME`). Con llaves foráneas activas, el
+  DROP dispara los `ON DELETE` de las tablas hijas (borró el producto de las
+  recetas en una base de prueba). `MigrationsService` apaga las FKs fuera de la
+  transacción, verifica adentro que estén apagadas y corre `foreign_key_check`
+  (prueba: `test/migraciones.e2e-spec.ts`). Aun así, si solo se agregan
+  columnas, preferir `ALTER TABLE ADD COLUMN` a mano.
+
 - **No hay usuario por defecto.** El administrador se crea en la pantalla de
   primer arranque (`POST /auth/setup`, solo desde loopback y solo con 0 usuarios).
 - `JwtModule` usa `registerAsync`: con `register`, el secreto se leía antes de

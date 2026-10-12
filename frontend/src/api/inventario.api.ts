@@ -95,7 +95,7 @@ export const recetasApi = {
 export const produccionApi = {
   list: (params: { from?: string; to?: string }) =>
     api.get<Produccion[]>('/produccion', { params }).then((r) => r.data),
-  registrar: (payload: { recetaId: string; tandas: number; notas?: string }) =>
+  registrar: (payload: { recetaId: string; tandas: number; notas?: string; porcionId?: string }) =>
     api.post<Produccion>('/produccion', payload).then((r) => r.data),
   anular: (id: string) => api.delete(`/produccion/${id}`).then((r) => r.data),
   hoja: (fecha?: string) => api.get<HojaProduccion>('/produccion/hoja', { params: { fecha } }).then((r) => r.data),

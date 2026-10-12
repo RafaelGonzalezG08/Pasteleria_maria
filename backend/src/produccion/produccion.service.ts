@@ -102,18 +102,42 @@ export class ProduccionService {
         );
       }
 
+      // Lo producido puede entrar como enteros (el producto de la receta) o
+      // directamente como porciones (el producto "porcion" de ese entero):
+      // un pastel que se hornea solo para vender por pedazo no tiene por que
+      // pasar por la existencia de enteros y luego cortarse.
+      let destinoId = receta.productoId;
       let unidades = 0;
       if (receta.productoId) {
         const porTanda = this.recetas.unidadesPorTanda(
           Number(receta.rendimiento),
           receta.unidadRendimiento,
         );
-        unidades = Math.floor((porTanda ?? 0) * dto.tandas + 1e-6);
+        let factor = 1;
+        if (dto.porcionId) {
+          const porcion = await tx.product.findUnique({ where: { id: dto.porcionId } });
+          if (
+            !porcion ||
+            porcion.porcionDeId !== receta.productoId ||
+            !porcion.porcionesPorUnidad
+          ) {
+            throw new BadRequestException(
+              `Ese producto no es una porcion de "${receta.producto?.nombre ?? 'el producto de la receta'}".`,
+            );
+          }
+          destinoId = porcion.id;
+          factor = porcion.porcionesPorUnidad;
+        }
+        unidades = Math.floor((porTanda ?? 0) * dto.tandas * factor + 1e-6);
         if (unidades < 1) {
           throw new BadRequestException(
             'Con esas tandas no sale ni una unidad completa del producto. Aumenta las tandas.',
           );
         }
+      } else if (dto.porcionId) {
+        throw new BadRequestException(
+          'Esta receta no produce ningun producto, no se puede producir en porciones.',
+        );
       }
 
       const creada = await tx.produccion.create({
@@ -122,7 +146,7 @@ export class ProduccionService {
           recetaId: receta.id,
           tandas: dto.tandas,
           unidadesProducidas: unidades,
-          productoId: receta.productoId,
+          productoId: destinoId,
           notas: dto.notas?.trim() || null,
           userId,
         },
@@ -149,9 +173,9 @@ export class ProduccionService {
         data: { costoTotal: redondearDinero(costoTotal) },
       });
 
-      if (receta.productoId && unidades > 0) {
+      if (destinoId && unidades > 0) {
         await tx.product.update({
-          where: { id: receta.productoId },
+          where: { id: destinoId },
           data: {
             stock: { increment: unidades },
             // El costo real de esta tanda pasa a ser el costo del producto: es

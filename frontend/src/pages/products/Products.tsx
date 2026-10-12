@@ -20,6 +20,8 @@ const FORM_VACIO: ProductFormValues = {
   stock: '0',
   categoriaId: '',
   descripcion: '',
+  porcionDeId: '',
+  porcionesPorUnidad: '',
   file: null,
 };
 
@@ -44,6 +46,7 @@ export default function Products() {
   const [creando, setCreando] = useState(false);
   const [editando, setEditando] = useState<Product | null>(null);
   const [mermaDe, setMermaDe] = useState<Product | null>(null);
+  const [cortarDe, setCortarDe] = useState<Product | null>(null);
   const [verCategorias, setVerCategorias] = useState(false);
 
   const { data: productos = [], isLoading } = useQuery<Product[]>({
@@ -209,20 +212,36 @@ export default function Products() {
                   <p className="mt-1.5 font-display font-bold tabular-nums text-ink">{formatMoney(p.precioUnitario)}</p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1">
                     {p.receta && <Badge tone="rose">Con receta</Badge>}
+                    {p.porcionDe && (
+                      <Badge tone="copper">
+                        Porcion de {p.porcionDe.nombre} (1/{p.porcionesPorUnidad})
+                      </Badge>
+                    )}
+                    {(p.porciones ?? []).length > 0 && <Badge tone="copper">Tambien por porcion</Badge>}
                     {margen !== null && (
                       <Badge tone={margen < 20 ? 'brick' : margen < 40 ? 'copper' : 'sage'}>
                         Margen {margen.toFixed(0)}%
                       </Badge>
                     )}
                   </div>
-                  {p.activo && p.stock > 0 && (
-                    <button
-                      onClick={() => setMermaDe(p)}
-                      className="mt-2 text-[11px] font-semibold text-muted hover:text-brick-600"
-                    >
-                      Registrar merma
-                    </button>
-                  )}
+                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                    {p.activo && p.porcionDe && (
+                      <button
+                        onClick={() => setCortarDe(p)}
+                        className="text-[11px] font-semibold text-copper-600 hover:text-copper-700"
+                      >
+                        Cortar en porciones
+                      </button>
+                    )}
+                    {p.activo && p.stock > 0 && (
+                      <button
+                        onClick={() => setMermaDe(p)}
+                        className="text-[11px] font-semibold text-muted hover:text-brick-600"
+                      >
+                        Registrar merma
+                      </button>
+                    )}
+                  </div>
                 </div>
               </Card>
             );
@@ -233,6 +252,7 @@ export default function Products() {
       {(creando || editando) && (
         <ProductoModal
           producto={editando}
+          productos={productos}
           categorias={categorias}
           esAdmin={esAdmin}
           pendiente={guardar.isPending}
@@ -248,6 +268,7 @@ export default function Products() {
       )}
 
       {mermaDe && <MermaModal producto={mermaDe} onClose={() => setMermaDe(null)} onDone={refrescar} />}
+      {cortarDe && <CortarModal porcion={cortarDe} onClose={() => setCortarDe(null)} onDone={refrescar} />}
       {verCategorias && <CategoriasModal categorias={categorias} esAdmin={esAdmin} onClose={() => setVerCategorias(false)} />}
     </div>
   );
@@ -255,6 +276,7 @@ export default function Products() {
 
 function ProductoModal({
   producto,
+  productos,
   categorias,
   esAdmin,
   pendiente,
@@ -265,6 +287,7 @@ function ProductoModal({
   bajaPendiente,
 }: {
   producto: Product | null;
+  productos: Product[];
   categorias: Category[];
   esAdmin: boolean;
   pendiente: boolean;
@@ -285,10 +308,15 @@ function ProductoModal({
           stock: String(producto.stock),
           categoriaId: producto.categoriaId ?? '',
           descripcion: producto.descripcion ?? '',
+          porcionDeId: producto.porcionDeId ?? '',
+          porcionesPorUnidad: producto.porcionesPorUnidad ? String(producto.porcionesPorUnidad) : '',
           file: null,
         }
       : FORM_VACIO,
   );
+  // Puede ser porcion de cualquier producto entero activo que no sea el mismo
+  // ni sea a su vez una porcion.
+  const enteros = productos.filter((p) => p.activo && p.id !== producto?.id && !p.porcionDeId);
   // El archivo no se puede guardar en localStorage: vive aparte.
   const [archivo, setArchivo] = useState<File | null>(null);
   const fotoActual = urlArchivo(producto?.imageUrl);
@@ -374,6 +402,34 @@ function ProductoModal({
             options={[{ value: '', label: 'Sin categoria' }, ...categorias.map((c) => ({ value: c.id, label: c.nombre }))]}
           />
         </Field>
+        <Field
+          label="Se vende por porcion de"
+          ayuda={
+            form.porcionDeId
+              ? 'La existencia de esta porcion sube al usar "Cortar en porciones": baja 1 entero y suben sus porciones. El costo es el del entero dividido entre las porciones.'
+              : 'Dejalo en "Se vende entero" salvo que este producto sea un pedazo de otro (ej. porcion de pastel).'
+          }
+        >
+          <div className="grid grid-cols-[1fr_140px] gap-2">
+            <Select
+              value={form.porcionDeId ?? ''}
+              onChange={(v) => setForm((f) => ({ ...f, porcionDeId: v }))}
+              options={[{ value: '', label: 'Se vende entero' }, ...enteros.map((p) => ({ value: p.id, label: p.nombre }))]}
+            />
+            {form.porcionDeId && (
+              <input
+                type="number"
+                min="2"
+                step="1"
+                value={form.porcionesPorUnidad ?? ''}
+                onChange={set('porcionesPorUnidad')}
+                placeholder="Porciones"
+                title="Porciones por entero"
+                className={INPUT}
+              />
+            )}
+          </div>
+        </Field>
         <Field label="Descripcion (opcional)">
           <textarea value={form.descripcion} onChange={set('descripcion')} rows={2} className={INPUT} />
         </Field>
@@ -395,6 +451,40 @@ function ProductoModal({
           )
         )}
       </form>
+    </Modal>
+  );
+}
+
+/** Corta pasteles enteros en porciones para venderlas por pedazo. */
+function CortarModal({ porcion, onClose, onDone }: { porcion: Product; onClose: () => void; onDone: () => void }) {
+  const [enteros, setEnteros] = useState('1');
+  const disponibles = porcion.porcionDe?.stock ?? 0;
+  const n = Number(enteros) || 0;
+  const cortar = useMutation({
+    mutationFn: () => productsApi.cortar(porcion.id, n),
+    onSuccess: (p) => {
+      toast.success(`Listo: ahora hay ${p.stock} "${p.nombre}".`);
+      onDone();
+      onClose();
+    },
+  });
+  return (
+    <Modal titulo="Cortar en porciones" onClose={onClose} ancho="max-w-sm">
+      <p className="mb-3 text-sm text-muted">
+        Hay <span className="font-semibold text-ink">{disponibles}</span> "{porcion.porcionDe?.nombre}" enteros. Cada uno
+        da {porcion.porcionesPorUnidad} porciones.
+      </p>
+      <Field label="Enteros a cortar">
+        <input type="number" min="1" max={disponibles} value={enteros} onChange={(e) => setEnteros(e.target.value)} className={INPUT} />
+      </Field>
+      {n > 0 && (
+        <p className="mt-2 text-sm text-ink">
+          −{n} {porcion.porcionDe?.nombre} · +{n * (porcion.porcionesPorUnidad ?? 0)} {porcion.nombre}
+        </p>
+      )}
+      <Button className="mt-3 w-full" disabled={n < 1 || n > disponibles || cortar.isPending} onClick={() => cortar.mutate()}>
+        {cortar.isPending && <Loader2 size={16} className="animate-spin" />} Cortar
+      </Button>
     </Modal>
   );
 }

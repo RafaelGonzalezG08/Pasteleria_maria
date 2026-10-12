@@ -35,4 +35,13 @@ export class RegistrarProduccionDto {
   @IsOptional()
   @IsString()
   notas?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Producir directamente en porciones: id del producto "porcion" del producto de la receta. ' +
+      'Vacio = sale como enteros.',
+  })
+  @IsOptional()
+  @IsString()
+  porcionId?: string;
 }

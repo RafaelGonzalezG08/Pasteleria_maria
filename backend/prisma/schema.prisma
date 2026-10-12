@@ -83,11 +83,19 @@ model Product {
   descripcion    String?
   activo         Boolean  @default(true)
   categoriaId    String?  @map("categoria_id")
+  // Venta por porcion: este producto es una porcion de `porcionDe` (el
+  // pastel entero) y de cada entero salen `porcionesPorUnidad`. Las
+  // porciones entran a la existencia al "cortar" un entero (ver
+  // ProductsService.cortar), no por produccion.
+  porcionDeId        String? @map("porcion_de_id")
+  porcionesPorUnidad Int?    @map("porciones_por_unidad")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   saleItems    SaleItem[]
   categoria    Category?     @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+  porcionDe    Product?      @relation("PorcionDe", fields: [porcionDeId], references: [id], onDelete: SetNull)
+  porciones    Product[]     @relation("PorcionDe")
   receta       Receta?
   producciones Produccion[]
   encargoItems EncargoItem[]

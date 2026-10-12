@@ -126,6 +126,22 @@ Pasteles, panes, bizcochos y postres listos para vender: precio, categoría,
 foto opcional y existencia. La existencia sube con la producción y baja con las
 ventas, las entregas de encargos y las mermas (**Registrar merma** en la tarjeta).
 
+**Vender un pastel por porciones:**
+
+1. Crea un producto nuevo, por ejemplo *Porción de pastel de chocolate*, con el
+   precio de cada pedazo.
+2. En **Se vende por porción de** elige el pastel entero (*Pastel de chocolate
+   10"*) y escribe cuántas porciones da (ej. 16).
+3. Para tener porciones en existencia hay dos formas:
+   - **Cortar en porciones** (en la tarjeta de la porción): baja 1 pastel entero
+     y suben 16 porciones. En la caja, si se acabaron las porciones y hay un
+     pastel entero, el sistema ofrece cortarlo ahí mismo.
+   - **Producir directo en porciones:** en Producción, al elegir la receta del
+     pastel aparece **Sale como**; elige *Porciones* y la tanda suma 16
+     porciones por cada pastel, sin pasar por los enteros.
+4. El costo de cada porción es el del pastel entero dividido entre sus
+   porciones, así la ganancia por pedazo sale correcta en Reportes.
+
 ## 9. Encargos
 
 **Encargos → Nuevo encargo:**

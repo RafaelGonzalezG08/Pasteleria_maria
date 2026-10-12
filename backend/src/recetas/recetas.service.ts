@@ -459,6 +459,22 @@ export class RecetasService {
           data: { costoUnitario: redondearDinero(costo) },
         });
       }
+      // Las porciones (venta por pedazo) cuestan lo que el entero entre sus porciones.
+      const porciones = await db.product.findMany({
+        where: { porcionDeId: { not: null }, porcionesPorUnidad: { gt: 0 } },
+        include: { porcionDe: { select: { costoUnitario: true } } },
+      });
+      for (const p of porciones) {
+        if (!p.porcionDe || !p.porcionesPorUnidad) continue;
+        await db.product.update({
+          where: { id: p.id },
+          data: {
+            costoUnitario: redondearDinero(
+              Number(p.porcionDe.costoUnitario) / p.porcionesPorUnidad,
+            ),
+          },
+        });
+      }
     } catch (error) {
       // Nunca tumba la operacion que lo disparo (una compra, guardar otra receta).
       this.logger.warn(`No se pudo actualizar el costo de los productos: ${error}`);

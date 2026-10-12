@@ -37,8 +37,8 @@ repositorio.
 | **Dashboard** | Encargos por entregar (atrasados en rojo), alertas de inventario (por agotarse / por vencer), cumpleaños de clientes y cifras del día y del mes. |
 | **Punto de venta** | Venta en mostrador, descuento, ITBIS, contado o crédito, factura PNG y envío por WhatsApp. |
 | **Encargos** | Pedidos de clientes con fecha y hora de entrega, retiro en tienda o a domicilio (con costo de envío), personalización por pastel (tamaño, sabor, relleno, decoración, mensaje y foto de referencia), anticipos y abonos, estados (pendiente → en producción → listo → entregado / cancelado), calendario mensual y comprobante imprimible. Al entregar se crea la venta con su factura; si queda saldo se puede dejar a crédito. |
-| **Productos** | Catálogo interno de producto terminado (pasteles, panes, bizcochos, postres): precio, categoría, foto opcional, existencia y mermas. El costo sale de la receta. |
-| **Producción** | Registra lo que se hornea: descuenta todos los insumos de la receta (abriendo subrecetas) y suma las unidades al producto. Hoja de producción del día a partir de los encargos (imprimible). |
+| **Productos** | Catálogo interno de producto terminado (pasteles, panes, bizcochos, postres): precio, categoría, foto opcional, existencia y mermas. El costo sale de la receta. **Venta por porción:** un producto puede ser porción de otro (ej. "Porción de pastel de chocolate", 16 por entero); sus porciones entran al **cortar** un pastel entero (también desde la caja, si se acabaron) o al producir directamente en porciones. |
+| **Producción** | Registra lo que se hornea: descuenta todos los insumos de la receta (abriendo subrecetas) y suma las unidades al producto, como enteros o directamente como porciones. Hoja de producción del día a partir de los encargos (imprimible). |
 | **Recetas** | Ingredientes y subrecetas (rellenos, cremas, masas), rendimiento, porciones, tiempo, pasos. Costo total, por unidad y por porción al precio actual de los insumos, precio sugerido con margen configurable y escalado (×2, ×5…) con aviso de lo que falta en inventario. |
 | **Inventario** | Insumos (ingredientes y materiales) con unidad de medida y conversión (g, kg, lb, oz, ml, L, unidad, docena, porción), existencia, mínimo, costo, lotes con fecha de vencimiento (se gasta primero lo que vence antes), historial de entradas/salidas/ajustes/mermas/compras/producción y **lista de compras** calculada con los encargos de los próximos días. |
 | **Compras** | Proveedores y compras. Cada compra entra al inventario como lote, actualiza el costo promedio del insumo (y con él el costo de recetas y productos) y queda registrada en Gastos. |
@@ -90,6 +90,7 @@ Los datos viven en `%APPDATA%\Pasteleria Maria\datos\` (base
 - **Comprar:** Compras → Registrar compra.
 - **Entregar:** abre el encargo → Entregar y cobrar.
 - **Mermas:** Inventario → insumo → Merma; Productos → Registrar merma.
+- **Vender por porción:** crea un producto "Porción de …" y en *Se vende por porción de* elige el pastel entero y cuántas porciones da. Luego *Cortar en porciones* (o producir eligiendo *Sale como: Porciones*).
 
 ## Desarrollo
 
