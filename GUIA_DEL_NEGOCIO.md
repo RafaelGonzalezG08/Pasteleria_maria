@@ -37,7 +37,7 @@ programadores. Léela una vez completa antes de empezar.
 
 ## 2. Instalación y primer arranque
 
-1. Ejecuta `Pasteleria-Maria-Setup-X.Y.Z.exe` y sigue los pasos.
+1. Ejecuta `pasteleria-maria-vX.Y.Z.exe` y sigue los pasos.
 2. Abre **Pastelería María** desde el escritorio.
 3. La primera vez aparece **Crear administrador**: escribe tu nombre, tu correo
    y una contraseña que recuerdes. Ese es el usuario dueño del sistema; no

@@ -89,8 +89,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            desktop/dist/Pasteleria-Maria-Setup-*.exe
-            desktop/dist/Pasteleria-Maria-Setup-*.exe.blockmap
+            desktop/dist/pasteleria-maria-v*.exe
+            desktop/dist/pasteleria-maria-v*.exe.blockmap
             desktop/dist/latest.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

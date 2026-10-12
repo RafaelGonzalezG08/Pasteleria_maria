@@ -16,7 +16,7 @@
   "build": {
     "appId": "com.pasteleriamaria.desktop",
     "productName": "Pasteleria Maria",
-    "artifactName": "Pasteleria-Maria-Setup-${version}.${ext}",
+    "artifactName": "pasteleria-maria-v${version}.${ext}",
     "asar": true,
     "files": [
       "main.js",

@@ -117,7 +117,7 @@ subirVersion(nueva);
 paso('5/5  Instalador (tarda varios minutos)');
 correr('npm run dist', __dirname);
 
-const salida = path.join(__dirname, 'dist', `Pasteleria-Maria-Setup-${nueva}.exe`);
+const salida = path.join(__dirname, 'dist', `pasteleria-maria-v${nueva}.exe`);
 if (fs.existsSync(salida)) {
   const mb = (fs.statSync(salida).size / 1024 / 1024).toFixed(0);
   console.log(`\nLISTO: ${salida}  (${mb} MB)`);
