@@ -31,7 +31,7 @@ export class ProduccionService {
       take: 300,
       include: {
         receta: { select: { id: true, nombre: true, unidadRendimiento: true } },
-        producto: { select: { id: true, nombre: true } },
+        producto: { select: { id: true, nombre: true, precioUnitario: true } },
         user: { select: { nombre: true } },
       },
     });
@@ -39,6 +39,13 @@ export class ProduccionService {
       ...p,
       tandas: Number(p.tandas),
       costoTotal: Number(p.costoTotal),
+      producto: p.producto
+        ? { ...p.producto, precioUnitario: Number(p.producto.precioUnitario) }
+        : null,
+      // Lo que vale lo producido al precio de venta actual (no es una venta).
+      valorVenta: p.producto
+        ? redondearDinero(p.unidadesProducidas * Number(p.producto.precioUnitario))
+        : null,
     }));
   }
 

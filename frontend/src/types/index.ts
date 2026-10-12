@@ -323,7 +323,9 @@ export interface Produccion {
   costoTotal?: number;
   notas?: string | null;
   receta: { id: string; nombre: string; unidadRendimiento: string };
-  producto?: { id: string; nombre: string } | null;
+  producto?: { id: string; nombre: string; precioUnitario?: number } | null;
+  /** Unidades producidas x precio de venta actual del producto. */
+  valorVenta?: number | null;
   user?: { nombre: string } | null;
 }
 

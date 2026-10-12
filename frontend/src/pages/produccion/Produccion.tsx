@@ -160,8 +160,17 @@ function Registrar() {
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   {p.unidadesProducidas > 0 && <Badge tone="sage">+{p.unidadesProducidas} {p.producto?.nombre}</Badge>}
+                  {p.valorVenta != null && (
+                    <span className="text-right text-xs leading-tight">
+                      <span className="block text-muted">Valor de venta</span>
+                      <span className="font-display text-sm font-semibold tabular-nums text-ink">{formatMoney(p.valorVenta)}</span>
+                    </span>
+                  )}
                   {esAdmin && p.costoTotal !== undefined && (
-                    <span className="tabular-nums text-muted">{formatMoney(p.costoTotal)}</span>
+                    <span className="text-right text-xs leading-tight">
+                      <span className="block text-muted">Costo</span>
+                      <span className="tabular-nums text-muted">{formatMoney(p.costoTotal)}</span>
+                    </span>
                   )}
                   {esAdmin && (
                     <button
