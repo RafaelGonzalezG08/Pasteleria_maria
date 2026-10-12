@@ -317,6 +317,45 @@ function ProductoModal({
   // Puede ser porcion de cualquier producto entero activo que no sea el mismo
   // ni sea a su vez una porcion.
   const enteros = productos.filter((p) => p.activo && p.id !== producto?.id && !p.porcionDeId);
+
+  // Crear lo que falta sin salir del formulario: la categoria o el producto
+  // entero del que sale esta porcion. Queda elegido al crearlo.
+  const crearCategoria = useMutation({
+    mutationFn: (nombre: string) => categoriesApi.create(nombre),
+    onSuccess: (categoria) => {
+      toast.success(`Categoria "${categoria.nombre}" creada.`);
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      setForm((f) => ({ ...f, categoriaId: categoria.id }));
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message ?? 'No se pudo crear la categoria.'),
+  });
+  const crearEntero = useMutation({
+    mutationFn: ({ nombre, precio }: { nombre: string; precio: string }) => {
+      if (!(Number(precio) > 0)) throw new Error('Escribe el precio del producto entero.');
+      return productsApi.create(
+        {
+          nombre,
+          precioUnitario: precio,
+          costoUnitario: '',
+          stock: '0',
+          categoriaId: form.categoriaId,
+          descripcion: '',
+          porcionDeId: '',
+          porcionesPorUnidad: '',
+          file: null,
+        },
+        false,
+      );
+    },
+    onSuccess: (entero) => {
+      toast.success(`"${entero.nombre}" creado.`);
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      setForm((f) => ({ ...f, porcionDeId: entero.id, porcionesPorUnidad: f.porcionesPorUnidad || '8' }));
+    },
+    onError: (error: any) => {
+      if (!error?.response) toast.error(error?.message ?? 'No se pudo crear el producto.');
+    },
+  });
   // El archivo no se puede guardar en localStorage: vive aparte.
   const [archivo, setArchivo] = useState<File | null>(null);
   const fotoActual = urlArchivo(producto?.imageUrl);
@@ -401,6 +440,12 @@ function ProductoModal({
             onChange={(v) => setForm((f) => ({ ...f, categoriaId: v }))}
             options={[{ value: '', label: 'Sin categoria' }, ...categorias.map((c) => ({ value: c.id, label: c.nombre }))]}
           />
+          <CrearEnLinea
+            textoBoton="Nueva categoria"
+            campos={[{ clave: 'nombre', placeholder: 'Pasteles, Panes, Postres...' }]}
+            pendiente={crearCategoria.isPending}
+            onCrear={(v) => crearCategoria.mutateAsync(v.nombre)}
+          />
         </Field>
         <Field
           label="Se vende por porcion de"
@@ -429,6 +474,15 @@ function ProductoModal({
               />
             )}
           </div>
+          <CrearEnLinea
+            textoBoton="Crear el producto entero"
+            campos={[
+              { clave: 'nombre', placeholder: 'Pastel de chocolate 10"' },
+              { clave: 'precio', placeholder: 'Precio del entero', tipo: 'number', ancho: 'w-36' },
+            ]}
+            pendiente={crearEntero.isPending}
+            onCrear={(v) => crearEntero.mutateAsync({ nombre: v.nombre, precio: v.precio })}
+          />
         </Field>
         <Field label="Descripcion (opcional)">
           <textarea value={form.descripcion} onChange={set('descripcion')} rows={2} className={INPUT} />
@@ -452,6 +506,83 @@ function ProductoModal({
         )}
       </form>
     </Modal>
+  );
+}
+
+/**
+ * Boton "+ Nueva ..." debajo de una lista: abre unos campos en linea para
+ * crear la opcion que falta sin salir del formulario. Enter crea (sin enviar
+ * el formulario de afuera) y Escape cancela.
+ */
+function CrearEnLinea({
+  textoBoton,
+  campos,
+  pendiente,
+  onCrear,
+}: {
+  textoBoton: string;
+  campos: { clave: string; placeholder: string; tipo?: string; ancho?: string }[];
+  pendiente: boolean;
+  onCrear: (valores: Record<string, string>) => Promise<unknown>;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const [valores, setValores] = useState<Record<string, string>>({});
+
+  async function crear() {
+    if (!campos.every((c) => (valores[c.clave] ?? '').trim())) {
+      toast.error('Completa los datos para crearlo.');
+      return;
+    }
+    try {
+      await onCrear(Object.fromEntries(campos.map((c) => [c.clave, valores[c.clave].trim()])));
+      setValores({});
+      setAbierto(false);
+    } catch {
+      // El error ya se mostro; se deja abierto para corregir.
+    }
+  }
+
+  if (!abierto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-copper-600 hover:text-copper-700"
+      >
+        <Plus size={13} /> {textoBoton}
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg p-2 shadow-neu-inset">
+      {campos.map((c, i) => (
+        <input
+          key={c.clave}
+          type={c.tipo ?? 'text'}
+          min={c.tipo === 'number' ? '0' : undefined}
+          step={c.tipo === 'number' ? '0.01' : undefined}
+          autoFocus={i === 0}
+          value={valores[c.clave] ?? ''}
+          onChange={(e) => setValores((v) => ({ ...v, [c.clave]: e.target.value }))}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              void crear();
+            }
+            if (e.key === 'Escape') setAbierto(false);
+          }}
+          placeholder={c.placeholder}
+          className={`rounded-lg px-2.5 py-1.5 text-sm ${c.ancho ?? 'min-w-0 flex-1'}`}
+        />
+      ))}
+      <Button type="button" size="sm" disabled={pendiente} onClick={() => void crear()}>
+        {pendiente ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Crear
+      </Button>
+      <button type="button" onClick={() => setAbierto(false)} className="rounded p-1 text-muted hover:text-ink" title="Cancelar">
+        <X size={14} />
+      </button>
+    </div>
   );
 }
 

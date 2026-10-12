@@ -1,6 +1,6 @@
 {
   "name": "pasteleria-maria-desktop",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Pastelería María - punto de venta, inventario, recetas, producción y encargos (base local y agente de WhatsApp integrados)",
   "main": "main.js",
   "private": true,
