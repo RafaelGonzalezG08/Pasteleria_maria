@@ -6,7 +6,7 @@ import { ArrowDown, ArrowUp, BookOpen, ChefHat, Clock, Factory, Layers, Loader2,
 import { insumosApi, recetasApi, type IngredientePayload, type RecetaPayload } from '../../api/inventario.api';
 import { productsApi } from '../../api/products.api';
 import { formatCantidad, formatMoney } from '../../lib/format';
-import { OPCIONES_UNIDAD, UNIDADES, opcionesCompatibles } from '../../lib/unidades';
+import { OPCIONES_UNIDAD, UNIDADES, convertir, opcionesCompatibles } from '../../lib/unidades';
 import { coincideBusqueda } from '../../lib/search';
 import { useAuthStore } from '../../store/auth.store';
 import { Badge, Button, Card, EmptyState, Field, INPUT, Modal, PageHeader, Select, Skeleton, Stat, Tabs } from '../../components/ui';
@@ -212,6 +212,13 @@ function RecetaForm({
 
   const productosLibres = productos.filter((p) => !p.receta || p.receta.id === receta?.id);
   const cuentaRendimiento = UNIDADES[form.unidadRendimiento]?.familia === 'CONTEO';
+  // Lo que de verdad suma a la existencia cada tanda: "1 docena" son 12
+  // productos, no un producto. Se dice con todas las letras porque es facil
+  // confundir "12 bizcochitos" con "un bizcocho de 12 porciones".
+  const productoElegido = productos.find((p) => p.id === form.productoId);
+  const unidadesTanda = cuentaRendimiento
+    ? Math.floor((convertir(Number(form.rendimiento) || 0, form.unidadRendimiento, 'unidad') ?? 0) + 1e-6)
+    : 0;
 
   const guardar = useMutation({
     mutationFn: () => {
@@ -299,9 +306,11 @@ function RecetaForm({
             <Field
               label="Producto que produce"
               ayuda={
-                cuentaRendimiento
-                  ? 'Al registrar la produccion, suma esas unidades a su existencia.'
-                  : 'Para producir un producto, el rendimiento debe contarse (unidad, docena o porcion).'
+                !cuentaRendimiento
+                  ? 'Para producir un producto, el rendimiento debe contarse (unidad, docena o porcion).'
+                  : productoElegido
+                    ? `Cada tanda suma ${unidadesTanda} "${productoElegido.nombre}" a la existencia (cada uno se vende por separado). Si es un pastel entero, pon Rinde 1 unidad y usa Porciones para los pedazos.`
+                    : 'Al registrar la produccion, cada unidad que rinde suma una a la existencia del producto.'
               }
             >
               <Select
@@ -437,7 +446,11 @@ function RecetaDetalleModal({ id, esAdmin, onClose }: { id: string; esAdmin: boo
                 <Clock size={11} className="mr-1" /> {receta.tiempoPreparacionMin} min
               </Badge>
             )}
-            {receta.producto && <Badge tone="rose">Produce: {receta.producto.nombre}</Badge>}
+            {receta.producto && (
+              <Badge tone="rose">
+                Cada tanda: +{receta.unidadesPorTanda ?? 0} {receta.producto.nombre}
+              </Badge>
+            )}
             <div className="ml-auto flex gap-2">
               {!receta.esSubreceta && receta.activo && (
                 <Button size="sm" onClick={() => navigate(`/produccion?receta=${receta.id}`)}>

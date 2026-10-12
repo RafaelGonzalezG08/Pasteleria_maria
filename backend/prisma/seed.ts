@@ -115,7 +115,7 @@ async function main() {
     },
     {
       sku: 'BI-0001',
-      nombre: 'Bizcocho de vainilla',
+      nombre: 'Bizcochito de vainilla (individual)',
       precioUnitario: 150,
       stock: 12,
       categoria: 'Bizcochos',
@@ -193,11 +193,11 @@ async function main() {
     });
     await prisma.receta.create({
       data: {
-        nombre: 'Bizcocho de vainilla (docena)',
+        nombre: 'Bizcochitos de vainilla (docena)',
         rendimiento: 1,
         unidadRendimiento: 'docena',
         tiempoPreparacionMin: 40,
-        productoId: productoId.get('Bizcocho de vainilla'),
+        productoId: productoId.get('Bizcochito de vainilla (individual)'),
         ingredientes: {
           create: [
             { insumoId: porNombre.get('Harina de trigo'), cantidad: 300, unidad: 'g', orden: 0 },
