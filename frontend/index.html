@@ -13,15 +13,8 @@
       (function () {
         try {
           var t = localStorage.getItem('pasteleria-maria-tema');
-          if (t === 'oscuro') {
-            document.documentElement.classList.add('dark');
-            return;
-          }
-          if (t === 'claro') return;
-          // Sin preferencia guardada se respeta el tema de Windows.
-          if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.classList.add('dark');
-          }
+          // Sin preferencia guardada, claro (ver src/lib/useTheme.ts).
+          if (t === 'oscuro') document.documentElement.classList.add('dark');
         } catch (e) {}
       })();
     </script>

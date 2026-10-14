@@ -14,15 +14,13 @@ function leerInicial(): Tema {
     const guardado = localStorage.getItem(CLAVE);
     if (guardado === 'claro' || guardado === 'oscuro') return guardado;
   } catch {
-    /* localStorage bloqueado: se usa la preferencia del sistema */
+    /* localStorage bloqueado: se usa el claro */
   }
-  // Sin preferencia guardada se respeta el tema de Windows. La misma logica
-  // vive duplicada en index.html (se aplica antes de que cargue este
-  // modulo) -- tocar las dos.
-  return typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'oscuro'
-    : 'claro';
+  // Sin preferencia guardada arranca en claro aunque Windows este en oscuro:
+  // la paleta de Rosa Delicias (rosa pastel y pistacho) esta pensada clara.
+  // La misma logica vive duplicada en index.html (se aplica antes de que
+  // cargue este modulo) -- tocar las dos.
+  return 'claro';
 }
 
 function aplicar(tema: Tema) {
