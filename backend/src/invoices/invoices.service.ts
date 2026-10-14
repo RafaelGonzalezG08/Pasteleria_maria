@@ -176,9 +176,7 @@ export class InvoicesService {
    * si carga bien desde cualquier pagina. Si el archivo no se puede leer, la
    * factura sale con el logo de Rosa Delicias (igual si no se subio ninguno).
    */
-  private async resolverLogoParaFactura(
-    logoUrl: string | null | undefined,
-  ): Promise<string> {
+  private async resolverLogoParaFactura(logoUrl: string | null | undefined): Promise<string> {
     if (!logoUrl) return LOGO_POR_DEFECTO;
     if (/^https?:\/\//i.test(logoUrl)) return logoUrl;
 
