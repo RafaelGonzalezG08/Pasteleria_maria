@@ -53,7 +53,10 @@ export function BarraTitulo() {
       // ya no coincidiria con los botones nativos que Windows pinta encima.
       style={{ height: ALTO_PX, backgroundColor: COLOR_BARRA, color: COLOR_TEXTO, WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
-      <img src={insignia} alt="" className="h-7 w-7 object-contain" />
+      {/* Circulo crema (el fondo del logo): sin el, la rosa se perdia sobre el rosado de la barra. */}
+      <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[#f4f5f0] shadow-sm">
+        <img src={insignia} alt="" className="h-6 w-6 object-contain" />
+      </span>
       <span className="font-lema text-[14px] font-semibold italic tracking-wide">Rosa Delicias</span>
     </div>
   );
