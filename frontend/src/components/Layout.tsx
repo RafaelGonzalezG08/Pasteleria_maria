@@ -112,9 +112,9 @@ export function Layout() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate font-display text-[15px] font-bold leading-none tracking-tight text-ink">
-              {profile?.nombre || 'Pastelería María'}
+              {profile?.nombre || 'Rosa Delicias'}
             </p>
-            <p className="mt-1 font-lema text-[13px] italic leading-none text-copper-600">
+            <p className="mt-1 font-lema text-[13px] italic leading-none text-sage-600">
               hecho con cariño
             </p>
           </div>
@@ -247,7 +247,7 @@ export function Layout() {
             <Menu size={20} />
           </button>
           <p className="truncate font-display text-sm font-bold text-ink">
-            {profile?.nombre || 'Pastelería María'}
+            {profile?.nombre || 'Rosa Delicias'}
           </p>
         </div>
         <div

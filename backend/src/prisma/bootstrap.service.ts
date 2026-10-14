@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
+import { NOMBRE_NEGOCIO_POR_DEFECTO } from '../common/negocio';
 
 /**
  * Deja la base utilizable la primera vez que se abre la aplicacion.
@@ -22,7 +23,7 @@ export class BootstrapService {
     // espera encontrar; sin ella la factura sale sin encabezado.
     const perfiles = await this.prisma.businessProfile.count();
     if (perfiles === 0) {
-      await this.prisma.businessProfile.create({ data: {} });
+      await this.prisma.businessProfile.create({ data: { nombre: NOMBRE_NEGOCIO_POR_DEFECTO } });
       this.logger.log('Se creo el perfil del negocio con los valores por defecto.');
     }
   }

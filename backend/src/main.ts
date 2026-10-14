@@ -59,9 +59,9 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   const config = new DocumentBuilder()
-    .setTitle('Pastelería María API')
+    .setTitle('Rosa Delicias API')
     .setDescription(
-      'API del sistema de punto de venta, inventario, recetas, produccion y encargos de Pastelería María.',
+      'API del sistema de punto de venta, inventario, recetas, produccion y encargos de Rosa Delicias.',
     )
     .setVersion('1.0')
     .addBearerAuth()
@@ -74,7 +74,7 @@ async function bootstrap() {
   // computadora donde esta instalada, nadie en la red tiene por que llegarle.
   await app.listen(port, '127.0.0.1');
   // eslint-disable-next-line no-console
-  console.log(`Pastelería María API escuchando en http://localhost:${port}/api`);
+  console.log(`Rosa Delicias API escuchando en http://localhost:${port}/api`);
   // eslint-disable-next-line no-console
   console.log(`Documentacion Swagger en http://localhost:${port}/api/docs`);
 }

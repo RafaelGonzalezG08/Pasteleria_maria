@@ -69,7 +69,8 @@ function dataDir() {
  *
  * Hace falta porque el nombre de la carpeta cambia segun como corra la app:
  * en desarrollo es "pasteleria-maria-desktop" (el `name` del package.json) y ya
- * instalada es "Pasteleria Maria" (el `productName`). El agente es un script
+ * instalada es "Pasteleria Maria" (fijada en main.js aunque la app ahora se
+ * llame Rosa Delicias, para no mover los datos). El agente es un script
  * aparte que no puede preguntarle nada a Electron, y con la ruta escrita a
  * mano habria buscado las facturas en una carpeta inexistente en la PC del
  * cliente — sin enviar nada y sin un error claro.
@@ -156,7 +157,7 @@ async function startBackend(onLog) {
   // de mostrar "EADDRINUSE".
   if (await puertoAbierto(BACKEND_PORT)) {
     throw new Error(
-      'Parece que Pasteleria Maria ya esta abierta (o quedo a medio cerrar).\n\n' +
+      'Parece que Rosa Delicias ya esta abierta (o quedo a medio cerrar).\n\n' +
         'Cierra la ventana que este abierta y vuelve a intentar. Si no ves ninguna, ' +
         'reinicia la computadora y abre la aplicacion de nuevo.',
     );
@@ -259,7 +260,7 @@ function lanzarBackend() {
       );
       const { dialog } = require('electron');
       dialog.showErrorBox(
-        'Pasteleria Maria',
+        'Rosa Delicias',
         'El servicio interno se esta cerrando solo una y otra vez.\n\n' +
           'Cierra la aplicacion y vuelve a abrirla. Si sigue igual, reinicia la ' +
           'computadora; si aun asi pasa, avisa para revisar el registro de errores.',

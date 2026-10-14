@@ -72,7 +72,7 @@ function buscarAhk2Exe() {
 
 const nueva = process.argv[2] || siguienteVersion(versionActual());
 
-console.log(`Compilando Pasteleria Maria ${versionActual()} -> ${nueva}`);
+console.log(`Compilando Rosa Delicias ${versionActual()} -> ${nueva}`);
 
 paso('1/5  Backend');
 fs.rmSync(path.join(BACKEND, 'tsconfig.build.tsbuildinfo'), { force: true });
@@ -117,7 +117,7 @@ subirVersion(nueva);
 paso('5/5  Instalador (tarda varios minutos)');
 correr('npm run dist', __dirname);
 
-const salida = path.join(__dirname, 'dist', `pasteleria-maria-v${nueva}.exe`);
+const salida = path.join(__dirname, 'dist', `rosa-delicias-v${nueva}.exe`);
 if (fs.existsSync(salida)) {
   const mb = (fs.statSync(salida).size / 1024 / 1024).toFixed(0);
   console.log(`\nLISTO: ${salida}  (${mb} MB)`);

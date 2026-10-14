@@ -7,10 +7,11 @@
  * Tailwind: bg-copper-500/20, etc.). El tema claro vive en :root; el oscuro
  * solo redefine lo que cambia bajo .dark (que pone/quita useTheme.ts).
  *
- * El modo oscuro es un ROSA PROFUNDO, no un negro: fondo ciruela-rosado
- * calido (#3A2B2D) con el rosa #ba7b7c de fondo en el texto secundario. La
- * barra lateral usa un tono aparte (--c-porcelain-side) para separarse del
- * area principal sin bordes.
+ * Rosa Delicias: ROSA PASTEL de color principal (copper-*, el nombre de la
+ * clase se quedo de la app original para no tocar cada pantalla) y VERDE
+ * PISTACHO de segundo color: la barra lateral, lo "listo / pagado" (sage-*) y
+ * los detalles. El modo oscuro es un ciruela-rosado, no un negro, con la
+ * barra lateral en un pistacho profundo.
  */
 :root {
   --c-espresso-950: 23 11 18;
@@ -18,41 +19,47 @@
   --c-espresso-800: 52 23 42;
   --c-espresso-700: 74 36 56;
 
+  /* Fondo rosado casi blanco; la barra lateral, crema de pistacho. */
   --c-porcelain-50: 255 255 255;
-  --c-porcelain-100: 243 232 235;
-  --c-porcelain-200: 234 220 224;
-  --c-porcelain-300: 224 205 211;
-  --c-porcelain-side: 229 213 218; /* barra lateral: un punto menos clara que las paginas */
+  --c-porcelain-100: 252 243 245;
+  --c-porcelain-200: 246 232 236;
+  --c-porcelain-300: 238 219 225;
+  --c-porcelain-side: 234 242 222;
 
-  --c-copper-50: 255 236 239;
-  --c-copper-100: 255 205 212;
-  --c-copper-200: 253 180 191;
-  --c-copper-300: 249 154 170;
-  --c-copper-400: 241 136 155;
-  --c-copper-500: 229 125 144;
-  --c-copper-600: 200 95 116;
-  --c-copper-700: 166 72 92;
+  /* Rosa pastel (#FFE2E9 … #E888A2) con dos tonos mas firmes (600/700) para
+     textos y botones: el pastel puro no se lee sobre fondo claro. */
+  --c-copper-50: 255 242 245;
+  --c-copper-100: 255 226 233;
+  --c-copper-200: 252 206 218;
+  --c-copper-300: 248 184 201;
+  --c-copper-400: 242 160 183;
+  --c-copper-500: 232 136 162;
+  --c-copper-600: 211 106 136;
+  --c-copper-700: 176 76 106;
 
-  --c-sage-100: 210 236 221;
-  --c-sage-500: 14 138 95;
-  --c-sage-600: 10 107 73;
-  --c-sage-700: 7 81 54;
+  /* Verde pistacho (#E5F0D5 … #86B352) y derivados oscuros para el texto. */
+  --c-sage-100: 229 240 213;
+  --c-sage-500: 134 179 82;
+  --c-sage-600: 88 128 46;
+  --c-sage-700: 64 98 32;
 
-  --c-brick-100: 243 216 220;
-  --c-brick-500: 163 35 71;
-  --c-brick-600: 132 28 58;
-  --c-brick-700: 99 21 44;
+  /* Frambuesa (alertas, deuda): distinto del rosa para que se note. */
+  --c-brick-100: 246 216 222;
+  --c-brick-500: 176 42 78;
+  --c-brick-600: 145 32 64;
+  --c-brick-700: 110 24 48;
 
-  --c-rose-100: 248 220 230;
-  --c-rose-400: 222 132 164;
-  --c-rose-500: 193 92 132;
-  --c-rose-600: 156 68 104;
+  /* Rosa fresa — acento secundario (cumpleaños). */
+  --c-rose-100: 252 222 232;
+  --c-rose-400: 238 140 172;
+  --c-rose-500: 214 98 140;
+  --c-rose-600: 170 66 106;
 
-  --c-ink: 51 35 42;
-  --c-muted: 154 130 138;
+  --c-ink: 58 40 48;
+  --c-muted: 150 126 135;
 
   /* Relieve neumorfico: sombra (abajo-derecha) y luz (arriba-izquierda). */
-  --neu-lo: 216 196 203;
+  --neu-lo: 225 205 212;
   --neu-hi: 255 255 255;
 
   color-scheme: light;
@@ -60,42 +67,52 @@
 
 .dark {
   --c-porcelain-50: 255 255 255; /* "papel" real (facturas) sigue blanco */
-  /* Fondo de las paginas: ciruela-rosado bien claro (no un negro). La barra
-     lateral va varios tonos por debajo para separarse sin bordes. */
-  --c-porcelain-100: 99 80 87;
-  --c-porcelain-200: 114 93 100;
-  --c-porcelain-300: 132 110 117;
-  --c-porcelain-side: 80 63 69;
+  /* Fondo de las paginas: ciruela-rosado claro (no un negro). La barra
+     lateral, pistacho profundo, para separarse sin bordes. */
+  --c-porcelain-100: 96 76 85;
+  --c-porcelain-200: 111 89 98;
+  --c-porcelain-300: 129 106 115;
+  --c-porcelain-side: 64 76 58;
 
-  --c-copper-50: 118 88 96;
-  --c-copper-100: 130 98 107;
-  --c-copper-600: 240 168 180;
-  --c-copper-700: 244 188 198;
+  --c-copper-50: 118 88 99;
+  --c-copper-100: 132 98 111;
+  --c-copper-600: 248 184 201;
+  --c-copper-700: 252 206 218;
 
-  /* Verde "conectado / pagado" para el fondo oscuro: apagado (poco teal, no
-     choca con el ciruela) y con texto claro legible. sage-700 hay que
-     definirlo aqui SI o SI: sin esto quedaba verde-oscuro sobre verde-oscuro
-     y no se leia (chip "WhatsApp conectado", insignia "OneDrive"). */
-  --c-sage-100: 66 84 76;
-  --c-sage-500: 31 162 113;
-  --c-sage-600: 128 202 172;
-  --c-sage-700: 160 216 190;
+  /* Pistacho claro sobre el fondo oscuro. sage-700 hay que definirlo aqui SI
+     o SI: sin esto quedaba verde oscuro sobre verde oscuro y no se leia
+     (chip "WhatsApp conectado", insignia "OneDrive"). */
+  --c-sage-100: 74 90 62;
+  --c-sage-500: 150 196 98;
+  --c-sage-600: 186 220 142;
+  --c-sage-700: 206 232 170;
 
-  --c-brick-100: 92 60 74;
-  --c-brick-500: 208 92 118;
-  --c-brick-600: 238 158 172;
-  --c-brick-700: 243 182 192;
+  --c-brick-100: 94 58 72;
+  --c-brick-500: 214 96 124;
+  --c-brick-600: 240 160 176;
+  --c-brick-700: 245 184 196;
 
-  --c-rose-100: 92 64 78;
-  --c-rose-600: 228 172 196;
+  --c-rose-100: 96 64 80;
+  --c-rose-600: 240 176 202;
 
-  --c-ink: 246 237 239;
-  --c-muted: 220 189 193; /* familia #ba7b7c, aclarado para el fondo mas claro */
+  --c-ink: 248 238 241;
+  --c-muted: 222 192 200;
 
-  --neu-lo: 76 60 66;
-  --neu-hi: 124 102 110;
+  --neu-lo: 78 60 68;
+  --neu-hi: 126 102 112;
 
   color-scheme: dark;
+}
+
+/* La barra lateral es de otro color (pistacho): su relieve se calcula sobre
+   ese verde y no sobre el rosado de las paginas, o las sombras se ven sucias. */
+.bg-porcelain-side {
+  --neu-lo: 208 222 190;
+  --neu-hi: 250 253 245;
+}
+.dark .bg-porcelain-side {
+  --neu-lo: 48 58 43;
+  --neu-hi: 84 99 76;
 }
 
 html, body, #root {

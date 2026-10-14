@@ -5,6 +5,7 @@ import { InvoicesService } from '../invoices/invoices.service';
 import { StorageService } from '../invoices/storage.service';
 import { optimizeLogo } from '../common/image.util';
 import { UpdateBusinessProfileDto } from './dto/update-business-profile.dto';
+import { NOMBRE_NEGOCIO_POR_DEFECTO } from '../common/negocio';
 
 @Injectable()
 export class SettingsService {
@@ -18,7 +19,7 @@ export class SettingsService {
   async getProfile() {
     const profile = await this.prisma.businessProfile.findFirst();
     if (profile) return profile;
-    return this.prisma.businessProfile.create({ data: {} });
+    return this.prisma.businessProfile.create({ data: { nombre: NOMBRE_NEGOCIO_POR_DEFECTO } });
   }
 
   async updateProfile(dto: UpdateBusinessProfileDto, userId?: string) {

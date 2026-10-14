@@ -12,7 +12,7 @@ import {
 } from 'class-validator';
 
 export class UpdateBusinessProfileDto {
-  @ApiProperty({ example: 'Pastelería María' })
+  @ApiProperty({ example: 'Rosa Delicias' })
   @IsString()
   @MinLength(2)
   nombre: string;

@@ -184,7 +184,7 @@ export function renderInvoiceHtml(
     margin: 0;
     font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     color: #241019;
-    background: #FBF2F1;
+    background: #FCF3F5;
   }
   .ticket {
     width: 380px;
@@ -201,15 +201,15 @@ export function renderInvoiceHtml(
     object-fit: contain; border-radius: 10px;
     border: 1px solid #F3E0E1;
   }
-  .header { text-align: center; border-bottom: 2px solid #B75D66; padding-bottom: 14px; margin-bottom: 16px; }
+  .header { text-align: center; border-bottom: 2px solid #D36A88; padding-bottom: 14px; margin-bottom: 16px; }
   .brand { display: flex; flex-direction: column; align-items: center; gap: 5px; }
   .brand-name { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; color: #241019; }
   .brand-meta { font-size: 11px; color: #93767C; }
   .invoice-meta { margin-top: 10px; font-size: 11px; color: #93767C; }
-  .invoice-number { font-size: 15px; font-weight: 700; color: #96434C; letter-spacing: 0.02em; }
+  .invoice-number { font-size: 15px; font-weight: 700; color: #B04C6A; letter-spacing: 0.02em; }
   .metodo-pago {
     display: inline-block; margin-top: 6px;
-    background: #F8DCE6; color: #9C4468;
+    background: #FFE2E9; color: #B04C6A;
     font-size: 10.5px; font-weight: 600;
     padding: 3px 11px; border-radius: 999px;
     text-transform: uppercase; letter-spacing: 0.05em;
@@ -257,7 +257,7 @@ export function renderInvoiceHtml(
     text-align: center;
   }
   .saldo-hero--due { background: #F3D8DC; border: 1.5px solid #E3AEB7; }
-  .saldo-hero--ok { background: #D2ECDD; border: 1.5px solid #A9D8BF; color: #075136; font-size: 16px; font-weight: 700; }
+  .saldo-hero--ok { background: #E5F0D5; border: 1.5px solid #C4DCA4; color: #406220; font-size: 16px; font-weight: 700; }
   .saldo-hero-label {
     display: block;
     font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;

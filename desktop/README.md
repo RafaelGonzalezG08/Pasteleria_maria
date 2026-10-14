@@ -1,4 +1,4 @@
-# Pastelería María - App de escritorio
+# Rosa Delicias - App de escritorio
 
 Empaqueta todo el proyecto (backend, interfaz y agente de WhatsApp) en una sola
 app de Windows con icono propio. Al abrirla:
@@ -45,7 +45,7 @@ npm run instalador        # sube el ultimo numero de version
 node compilar.js 1.2.0    # o una version exacta
 ```
 
-Sale en `desktop/dist/pasteleria-maria-v<version>.exe`.
+Sale en `desktop/dist/rosa-delicias-v<version>.exe`.
 
 Para **publicar** una actualización no hace falta esto: basta empujar un tag
 `vX.Y.Z` y GitHub Actions compila y crea el release (ver el README principal,

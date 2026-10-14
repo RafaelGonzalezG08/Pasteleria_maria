@@ -1,4 +1,4 @@
-// Esquema de base de datos - Pastelería María
+// Esquema de base de datos - Rosa Delicias
 //
 // SQLite no tiene enums: los campos de estado/tipo son texto y sus valores
 // validos viven en src/common/enums.ts. Tampoco tiene tipo Json: las listas se
@@ -591,6 +591,8 @@ model AuditLog {
 // Perfil unico del negocio (fila singleton) usado en Configuracion.
 model BusinessProfile {
   id            String   @id @default(cuid())
+  // Nombre viejo a proposito: el codigo crea el perfil con
+  // NOMBRE_NEGOCIO_POR_DEFECTO (common/negocio.ts); ver ese archivo.
   nombre        String   @default("Pastelería María")
   logoUrl       String?  @map("logo_url")
   direccion     String?

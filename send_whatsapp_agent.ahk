@@ -54,7 +54,8 @@ LOG_FILE          := LOCAL_DIR "\agent.log"
 ; (ver dataDir() en desktop/nativo.js). Ya no hay volumenes de Docker: la
 ; cola, las facturas y los resultados son carpetas normales de Windows.
 ; La carpeta de datos cambia de nombre segun como corra la app: instalada es
-; "Pasteleria Maria" (productName) y en desarrollo "pasteleria-maria-desktop"
+; "Pasteleria Maria" (nombre viejo de la app, fijado en desktop/main.js para no
+; mover los datos al pasar a Rosa Delicias) y en desarrollo "pasteleria-maria-desktop"
 ; (name del package.json). Por eso NO se escribe a mano: la app deja la ruta
 ; real en ruta-datos.txt al arrancar (ver publicarRutaParaElAgente en
 ; desktop/nativo.js). Si ese archivo no existe todavia -por ejemplo si el
@@ -98,12 +99,12 @@ if !FileExist(WHATSAPP_EXE_PATH)
 FileCreateDir, %QUEUE_DIR%
 FileCreateDir, %RESULTS_DIR%
 if !FileExist(UPLOADS_DIR)
-    LogLine("AVISO: no existe " UPLOADS_DIR ". Abre Pasteleria Maria al menos una vez para que se cree.")
+    LogLine("AVISO: no existe " UPLOADS_DIR ". Abre Rosa Delicias al menos una vez para que se cree.")
 
 LogLine("=== Agente de WhatsApp iniciado. Vigilando " QUEUE_DIR " cada " POLL_INTERVAL_MS "ms ===")
 
 ; Icono de bandeja para saber que esta corriendo (click derecho > Exit para salir)
-Menu, Tray, Tip, Agente WhatsApp Pasteleria Maria (activo)
+Menu, Tray, Tip, Agente WhatsApp Rosa Delicias (activo)
 
 Loop
 {

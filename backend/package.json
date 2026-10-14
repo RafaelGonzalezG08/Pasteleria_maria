@@ -1,7 +1,7 @@
 {
   "name": "pasteleria-maria-backend",
   "version": "1.0.0",
-  "description": "API backend de Pasteleria Maria - POS, inventario, recetas, produccion y encargos",
+  "description": "API backend de Rosa Delicias - POS, inventario, recetas, produccion y encargos",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {

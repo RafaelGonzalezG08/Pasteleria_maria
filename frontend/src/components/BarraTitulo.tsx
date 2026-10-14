@@ -3,7 +3,7 @@ import { CakeSlice } from 'lucide-react';
 
 /** Mismos valores que ALTO_BARRA_TITULO / COLOR_BARRA_TITULO en desktop/main.js (y --alto-barra en index.css). */
 const ALTO_PX = 36;
-const COLOR_BARRA = '#c85f74';
+const COLOR_BARRA = '#d36a88';
 
 interface WindowControlsOverlay {
   visible: boolean;
@@ -55,7 +55,7 @@ export function BarraTitulo() {
       <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/20">
         <CakeSlice size={12} />
       </span>
-      <span className="font-display text-[13px] font-semibold tracking-wide">Pastelería María</span>
+      <span className="font-display text-[13px] font-semibold tracking-wide">Rosa Delicias</span>
     </div>
   );
 }

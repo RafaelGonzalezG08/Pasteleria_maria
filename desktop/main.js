@@ -26,6 +26,17 @@ const fs = require('fs');
 // Tiene que llamarse ANTES de app.whenReady()/cualquier BrowserWindow.
 app.disableHardwareAcceleration();
 
+// La app se llamo "Pastelería María" hasta la 1.0.3. Electron nombra la
+// carpeta de datos (%APPDATA%\<productName>) con el nombre de la app, asi que
+// al pasar a "Rosa Delicias" la base, las fotos y las facturas habrian
+// "desaparecido" en las PCs que ya la usaban. Se fija la carpeta de siempre:
+// instalada "Pasteleria Maria", en desarrollo "pasteleria-maria-desktop".
+// Tiene que ir antes de requestSingleInstanceLock y de cualquier getPath.
+app.setPath(
+  'userData',
+  path.join(app.getPath('appData'), app.isPackaged ? 'Pasteleria Maria' : 'pasteleria-maria-desktop'),
+);
+
 // En produccion (app empaquetada), el proyecto completo (backend/, frontend/,
 // agente de WhatsApp) vive en resources/app-project. En desarrollo ("npm start"
 // dentro de desktop/), es la carpeta padre.
@@ -198,7 +209,7 @@ function launchWhatsappAgent() {
     shell.openPath(ahkPath);
   } else {
     dialog.showErrorBox(
-      'Pastelería María',
+      'Rosa Delicias',
       'No se encontro send_whatsapp_agent.exe/.ahk. El envio por WhatsApp no va a funcionar hasta que lo agregues junto al proyecto.',
     );
   }
@@ -207,7 +218,7 @@ function launchWhatsappAgent() {
 // Color de marca (copper-600 de frontend/src/index.css) y alto de la barra de
 // titulo. El alto tiene que coincidir con --alto-barra en index.css y con
 // ALTO_PX en BarraTitulo.tsx.
-const COLOR_BARRA_TITULO = '#c85f74';
+const COLOR_BARRA_TITULO = '#d36a88';
 const ALTO_BARRA_TITULO = 36;
 
 /**
@@ -224,7 +235,7 @@ async function createMainWindow(url) {
     show: false,
     autoHideMenuBar: true,
     icon: path.join(__dirname, 'build', 'icon.png'),
-    title: 'Pastelería María',
+    title: 'Rosa Delicias',
     // Barra de titulo propia (la dibuja la interfaz, ver BarraTitulo.tsx): se
     // quita la de Windows -- gris oscura, no combinaba con la app -- y solo
     // quedan los botones de minimizar/maximizar/cerrar, pintados del color de
@@ -261,7 +272,7 @@ async function createMainWindow(url) {
   mainWindow.webContents.on('did-fail-load', (_e, code, descripcion, urlFallida) => {
     console.error(`No se pudo cargar la interfaz (${code} ${descripcion}): ${urlFallida}`);
     dialog.showErrorBox(
-      'Pastelería María',
+      'Rosa Delicias',
       `No se pudo cargar la interfaz desde:\n${urlFallida}\n\n${descripcion}\n\n` +
         'Cierra la aplicacion y vuelve a abrirla. Si sigue igual, avisa para revisarlo.',
     );
@@ -400,7 +411,7 @@ async function checkForUpdates() {
         .showMessageBox(parentWin, {
           type: 'info',
           title: 'Actualización disponible',
-          message: `Pastelería María ${info.version} está disponible.`,
+          message: `Rosa Delicias ${info.version} está disponible.`,
           detail: 'La actualización se instalará la próxima vez que reinicies la aplicación.',
           buttons: ['Instalar ahora y reiniciar', 'Instalar después'],
           defaultId: 0,
@@ -485,7 +496,7 @@ async function startup() {
     setSplashStatus('Iniciando el agente de WhatsApp...');
     launchWhatsappAgent();
 
-    setSplashStatus('Abriendo Pastelería María...');
+    setSplashStatus('Abriendo Rosa Delicias...');
     await createMainWindow(urlInterfaz);
 
     // Copia de seguridad fuera de la PC. Va despues de abrir la ventana y sin
@@ -524,7 +535,7 @@ async function startup() {
     }
   } catch (error) {
     if (splashWindow && !splashWindow.isDestroyed()) splashWindow.destroy();
-    dialog.showErrorBox('Pastelería María', String(error.message || error));
+    dialog.showErrorBox('Rosa Delicias', String(error.message || error));
     app.quit();
   }
 }

@@ -18,7 +18,7 @@ function Encabezado({ subtitulo }: { subtitulo: string }) {
       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-copper-400 to-copper-600 shadow-neu-sm">
         <CakeSlice size={24} className="text-white" />
       </div>
-      <h1 className="font-display text-xl font-bold text-ink">Pastelería María</h1>
+      <h1 className="font-display text-xl font-bold text-ink">Rosa Delicias</h1>
       <p className="mt-1 text-sm text-muted">{subtitulo}</p>
     </div>
   );

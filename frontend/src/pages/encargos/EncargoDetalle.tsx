@@ -367,7 +367,7 @@ function TicketEncargo({ encargo: e, onClose }: { encargo: Encargo; onClose: () 
     <Modal titulo="Comprobante del encargo" onClose={onClose} ancho="max-w-md">
       <div className="zona-impresion mx-auto max-w-[340px] rounded-lg bg-porcelain-50 p-5 font-mono text-[12px] leading-snug text-black">
         <div className="text-center">
-          <p className="text-base font-bold">{perfil?.nombre ?? 'Pastelería María'}</p>
+          <p className="text-base font-bold">{perfil?.nombre ?? 'Rosa Delicias'}</p>
           {perfil?.direccion && <p>{perfil.direccion}</p>}
           {perfil?.telefono && <p>Tel. {perfil.telefono}</p>}
           {perfil?.identifFiscal && <p>RNC {perfil.identifFiscal}</p>}

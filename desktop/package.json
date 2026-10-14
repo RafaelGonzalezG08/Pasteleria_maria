@@ -1,7 +1,7 @@
 {
   "name": "pasteleria-maria-desktop",
   "version": "1.0.2",
-  "description": "Pastelería María - punto de venta, inventario, recetas, producción y encargos (base local y agente de WhatsApp integrados)",
+  "description": "Rosa Delicias - punto de venta, inventario, recetas, producción y encargos (base local y agente de WhatsApp integrados)",
   "main": "main.js",
   "private": true,
   "scripts": {
@@ -15,8 +15,8 @@
   },
   "build": {
     "appId": "com.pasteleriamaria.desktop",
-    "productName": "Pasteleria Maria",
-    "artifactName": "pasteleria-maria-v${version}.${ext}",
+    "productName": "Rosa Delicias",
+    "artifactName": "rosa-delicias-v${version}.${ext}",
     "asar": true,
     "files": [
       "main.js",
@@ -73,7 +73,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Pastelería María"
+      "shortcutName": "Rosa Delicias"
     },
     "publish": {
       "provider": "github",

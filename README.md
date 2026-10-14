@@ -1,4 +1,4 @@
-# Pastelería María
+# Rosa Delicias
 
 Sistema de escritorio para una pastelería en República Dominicana: punto de venta,
 encargos de clientes, inventario de insumos, recetas con costeo, producción,
@@ -58,9 +58,9 @@ repositorio.
 
 ## Instalación (PC del negocio)
 
-1. Descarga el instalador `pasteleria-maria-vX.Y.Z.exe` del último
+1. Descarga el instalador `rosa-delicias-vX.Y.Z.exe` del último
    [release](https://github.com/RafaelGonzalezG08/Pasteleria_maria/releases/latest).
-2. Ejecútalo (siguiente, siguiente…). Crea el acceso directo **Pastelería María**.
+2. Ejecútalo (siguiente, siguiente…). Crea el acceso directo **Rosa Delicias**.
 3. Para la factura por WhatsApp: instala **WhatsApp Desktop** y deja la sesión
    iniciada. La app arranca sola el agente que pega la factura en el chat.
 
@@ -162,8 +162,8 @@ instala sola en el siguiente arranque).
 4. GitHub Actions (`.github/workflows/build.yml`) arranca solo: compila backend,
    frontend y el agente de WhatsApp (`.ahk` → `.exe`), genera el instalador y
    crea el **release `v1.0.1`** con:
-   - `pasteleria-maria-v1.0.1.exe`
-   - `pasteleria-maria-v1.0.1.exe.blockmap`
+   - `rosa-delicias-v1.0.1.exe`
+   - `rosa-delicias-v1.0.1.exe.blockmap`
    - `latest.yml` (lo que lee el actualizador; **no lo borres del release**)
 5. Revisa en **Actions** que termine en verde y en **Releases** que estén los 3
    archivos. Desde ese momento, cada PC se actualiza al abrir la app.

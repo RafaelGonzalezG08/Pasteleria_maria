@@ -10,6 +10,7 @@ import { StorageService } from './storage.service';
 import { WhatsappService } from './whatsapp.service';
 import { WhatsappQueueService } from './whatsapp-queue.service';
 import { renderInvoiceHtml } from './invoice.template';
+import { NOMBRE_NEGOCIO_POR_DEFECTO } from '../common/negocio';
 
 @Injectable()
 export class InvoicesService {
@@ -222,7 +223,7 @@ export class InvoicesService {
     const profile = await this.prisma.businessProfile.findFirst();
     return (
       profile ?? {
-        nombre: 'Pastelería María',
+        nombre: NOMBRE_NEGOCIO_POR_DEFECTO,
         logoUrl: null,
         direccion: null,
         telefono: null,

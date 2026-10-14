@@ -2,7 +2,7 @@
 
 ## Qué es
 
-**Pastelería María**: punto de venta, encargos, inventario de insumos, recetas
+**Rosa Delicias** (antes "Pastelería María"): punto de venta, encargos, inventario de insumos, recetas
 con costeo, producción, compras, cobros y reportes para una pastelería en
 República Dominicana. Montos en **RD$** (configurable), impuesto **ITBIS**
 (configurable), factura por **WhatsApp**.

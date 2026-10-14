@@ -24,7 +24,7 @@ async function main() {
   if (!perfil) {
     await prisma.businessProfile.create({
       data: {
-        nombre: 'Pastelería María',
+        nombre: 'Rosa Delicias',
         direccion: 'Calle Principal #123',
         telefono: '809-555-0000',
       },

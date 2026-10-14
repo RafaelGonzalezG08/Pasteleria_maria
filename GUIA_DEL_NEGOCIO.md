@@ -1,4 +1,4 @@
-# Pastelería María — Guía de uso
+# Rosa Delicias — Guía de uso
 
 Esta guía es para quien usa el programa en la pastelería, no para
 programadores. Léela una vez completa antes de empezar.
@@ -37,8 +37,8 @@ programadores. Léela una vez completa antes de empezar.
 
 ## 2. Instalación y primer arranque
 
-1. Ejecuta `pasteleria-maria-vX.Y.Z.exe` y sigue los pasos.
-2. Abre **Pastelería María** desde el escritorio.
+1. Ejecuta `rosa-delicias-vX.Y.Z.exe` y sigue los pasos.
+2. Abre **Rosa Delicias** desde el escritorio.
 3. La primera vez aparece **Crear administrador**: escribe tu nombre, tu correo
    y una contraseña que recuerdes. Ese es el usuario dueño del sistema; no
    existe ningún usuario "de fábrica".
@@ -224,5 +224,5 @@ si instalarla ahora o la próxima vez. Tus datos no se tocan.
 | "No hay suficiente … para esta producción" | Registra la compra o un ajuste de inventario, o baja las tandas. |
 | "No se puede convertir … son medidas distintas" | Usa una unidad de la misma medida que el insumo (peso con peso, volumen con volumen, cantidad con cantidad). |
 | La factura no llega por WhatsApp | Abre WhatsApp Desktop con la sesión iniciada y reintenta desde Ventas. |
-| "Parece que Pastelería María ya está abierta" | Cierra la otra ventana; si no ves ninguna, reinicia la PC. |
+| "Parece que Rosa Delicias ya está abierta" | Cierra la otra ventana; si no ves ninguna, reinicia la PC. |
 | Olvidé la contraseña | Otro administrador puede crearte un usuario nuevo. |
