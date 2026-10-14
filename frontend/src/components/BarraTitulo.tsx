@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { CakeSlice } from 'lucide-react';
 
-/** Mismos valores que ALTO_BARRA_TITULO / COLOR_BARRA_TITULO en desktop/main.js (y --alto-barra en index.css). */
+/** Mismos valores que ALTO_BARRA_TITULO / COLOR_BARRA_TITULO / COLOR_SIMBOLOS_BARRA en desktop/main.js (y --alto-barra en index.css). */
 const ALTO_PX = 36;
-const COLOR_BARRA = '#d36a88';
+const COLOR_BARRA = '#f8b8c9';
+const COLOR_TEXTO = '#3a2830';
 
 interface WindowControlsOverlay {
   visible: boolean;
@@ -47,12 +48,12 @@ export function BarraTitulo() {
 
   return (
     <div
-      className="fixed inset-x-0 top-0 z-[100] flex select-none items-center gap-2 px-3 text-white"
+      className="fixed inset-x-0 top-0 z-[100] flex select-none items-center gap-2 px-3"
       // Color fijo, no un token del tema: en modo oscuro copper-600 se aclara y
       // ya no coincidiria con los botones nativos que Windows pinta encima.
-      style={{ height: ALTO_PX, backgroundColor: COLOR_BARRA, WebkitAppRegion: 'drag' } as React.CSSProperties}
+      style={{ height: ALTO_PX, backgroundColor: COLOR_BARRA, color: COLOR_TEXTO, WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
-      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/20">
+      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/50">
         <CakeSlice size={12} />
       </span>
       <span className="font-display text-[13px] font-semibold tracking-wide">Rosa Delicias</span>

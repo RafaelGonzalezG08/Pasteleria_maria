@@ -215,10 +215,12 @@ function launchWhatsappAgent() {
   }
 }
 
-// Color de marca (copper-600 de frontend/src/index.css) y alto de la barra de
+// Rosa pastel de la marca (copper-300 de frontend/src/index.css) con simbolos
+// ciruela (blanco no se leia sobre el pastel), y alto de la barra de
 // titulo. El alto tiene que coincidir con --alto-barra en index.css y con
 // ALTO_PX en BarraTitulo.tsx.
-const COLOR_BARRA_TITULO = '#d36a88';
+const COLOR_BARRA_TITULO = '#f8b8c9';
+const COLOR_SIMBOLOS_BARRA = '#3a2830';
 const ALTO_BARRA_TITULO = 36;
 
 /**
@@ -244,7 +246,7 @@ async function createMainWindow(url) {
     ...(process.platform === 'win32'
       ? {
           titleBarStyle: 'hidden',
-          titleBarOverlay: { color: COLOR_BARRA_TITULO, symbolColor: '#ffffff', height: ALTO_BARRA_TITULO },
+          titleBarOverlay: { color: COLOR_BARRA_TITULO, symbolColor: COLOR_SIMBOLOS_BARRA, height: ALTO_BARRA_TITULO },
         }
       : {}),
     webPreferences: { contextIsolation: true },

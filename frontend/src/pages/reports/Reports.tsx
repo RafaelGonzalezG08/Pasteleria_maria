@@ -76,7 +76,7 @@ export default function Reports() {
   // se pasan a mano segun el tema.
   const { esOscuro } = useTheme();
   const chart = esOscuro
-    ? { grid: '#6F5962', eje: '#DEC0C8', barra: '#F8B8C9', tipBg: '#4E3C44', tipBorde: '#6F5962', tipTexto: '#F8EEF1' }
+    ? { grid: '#7D666F', eje: '#E4C8D0', barra: '#F8B8C9', tipBg: '#5A4650', tipBorde: '#7D666F', tipTexto: '#F8EEF1' }
     : { grid: '#EEDBE1', eje: '#967E87', barra: '#E888A2', tipBg: '#FFFFFF', tipBorde: '#EEDBE1', tipTexto: '#3A2830' };
 
   const params = { from: from || undefined, to: to || undefined };

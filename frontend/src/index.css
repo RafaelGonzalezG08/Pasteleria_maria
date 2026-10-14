@@ -67,39 +67,39 @@
 
 .dark {
   --c-porcelain-50: 255 255 255; /* "papel" real (facturas) sigue blanco */
-  /* Fondo de las paginas: ciruela-rosado claro (no un negro). La barra
+  /* Fondo de las paginas: ciruela-rosado medio (no un negro). La barra
      lateral, pistacho profundo, para separarse sin bordes. */
-  --c-porcelain-100: 96 76 85;
-  --c-porcelain-200: 111 89 98;
-  --c-porcelain-300: 129 106 115;
-  --c-porcelain-side: 64 76 58;
+  --c-porcelain-100: 110 89 98;
+  --c-porcelain-200: 125 102 111;
+  --c-porcelain-300: 143 119 128;
+  --c-porcelain-side: 76 90 69;
 
-  --c-copper-50: 118 88 99;
-  --c-copper-100: 132 98 111;
+  --c-copper-50: 132 101 112;
+  --c-copper-100: 146 112 124;
   --c-copper-600: 248 184 201;
   --c-copper-700: 252 206 218;
 
   /* Pistacho claro sobre el fondo oscuro. sage-700 hay que definirlo aqui SI
      o SI: sin esto quedaba verde oscuro sobre verde oscuro y no se leia
      (chip "WhatsApp conectado", insignia "OneDrive"). */
-  --c-sage-100: 74 90 62;
+  --c-sage-100: 86 104 72;
   --c-sage-500: 150 196 98;
   --c-sage-600: 186 220 142;
   --c-sage-700: 206 232 170;
 
-  --c-brick-100: 94 58 72;
+  --c-brick-100: 108 70 84;
   --c-brick-500: 214 96 124;
   --c-brick-600: 240 160 176;
   --c-brick-700: 245 184 196;
 
-  --c-rose-100: 96 64 80;
+  --c-rose-100: 110 76 93;
   --c-rose-600: 240 176 202;
 
   --c-ink: 248 238 241;
   --c-muted: 222 192 200;
 
-  --neu-lo: 78 60 68;
-  --neu-hi: 126 102 112;
+  --neu-lo: 90 71 80;
+  --neu-hi: 140 115 125;
 
   color-scheme: dark;
 }
@@ -111,8 +111,8 @@
   --neu-hi: 250 253 245;
 }
 .dark .bg-porcelain-side {
-  --neu-lo: 48 58 43;
-  --neu-hi: 84 99 76;
+  --neu-lo: 60 72 54;
+  --neu-hi: 96 112 88;
 }
 
 html, body, #root {
