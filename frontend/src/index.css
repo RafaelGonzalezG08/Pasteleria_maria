@@ -102,6 +102,29 @@ html, body, #root {
   height: 100%;
 }
 
+/*
+ * Barra de titulo propia de la app de escritorio (ver BarraTitulo.tsx): en
+ * Electron la ventana no trae la barra de Windows, y esta variable corre el
+ * contenido hacia abajo. En un navegador normal vale 0 y no cambia nada.
+ */
+:root {
+  --alto-barra: 0px;
+}
+html.con-barra-titulo {
+  --alto-barra: 36px;
+}
+html.con-barra-titulo body {
+  padding-top: var(--alto-barra);
+}
+/* Las pantallas que miden "todo el alto" restan la barra. Van despues de
+   @tailwind utilities para ganarle a h-dvh / min-h-dvh sin !important. */
+.h-dvh {
+  height: calc(100dvh - var(--alto-barra));
+}
+.min-h-dvh {
+  min-height: calc(100dvh - var(--alto-barra));
+}
+
 body {
   @apply bg-porcelain-100 text-ink antialiased select-none;
   font-feature-settings: 'tnum' on, 'lnum' on;

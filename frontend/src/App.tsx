@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { BarraTitulo } from './components/BarraTitulo';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -32,6 +33,7 @@ function Protegida({ roles, children }: { roles: Role[]; children: JSX.Element }
 export default function App() {
   return (
     <BrowserRouter>
+      <BarraTitulo />
       <Routes>
         <Route path="/login" element={<Login />} />
 

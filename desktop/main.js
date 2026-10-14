@@ -204,6 +204,12 @@ function launchWhatsappAgent() {
   }
 }
 
+// Color de marca (copper-600 de frontend/src/index.css) y alto de la barra de
+// titulo. El alto tiene que coincidir con --alto-barra en index.css y con
+// ALTO_PX en BarraTitulo.tsx.
+const COLOR_BARRA_TITULO = '#c85f74';
+const ALTO_BARRA_TITULO = 36;
+
 /**
  * @param {string} url Direccion que sirve la interfaz. La devuelve
  *   nativo.startFrontend(), que es quien sabe en que puerto quedo
@@ -219,6 +225,17 @@ async function createMainWindow(url) {
     autoHideMenuBar: true,
     icon: path.join(__dirname, 'build', 'icon.png'),
     title: 'Pastelería María',
+    // Barra de titulo propia (la dibuja la interfaz, ver BarraTitulo.tsx): se
+    // quita la de Windows -- gris oscura, no combinaba con la app -- y solo
+    // quedan los botones de minimizar/maximizar/cerrar, pintados del color de
+    // marca. Se conserva el arrastre, el cambio de tamaño y el acoplado a los
+    // bordes de Windows.
+    ...(process.platform === 'win32'
+      ? {
+          titleBarStyle: 'hidden',
+          titleBarOverlay: { color: COLOR_BARRA_TITULO, symbolColor: '#ffffff', height: ALTO_BARRA_TITULO },
+        }
+      : {}),
     webPreferences: { contextIsolation: true },
   });
 
