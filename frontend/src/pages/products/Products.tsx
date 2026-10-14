@@ -9,6 +9,8 @@ import { coincideBusqueda } from '../../lib/search';
 import { usePersistedState } from '../../lib/usePersistedState';
 import { useAuthStore } from '../../store/auth.store';
 import { Badge, Button, Card, EmptyState, Field, INPUT, Modal, PageHeader, Select, Skeleton, Tabs } from '../../components/ui';
+import { usePaginacion } from '../../lib/usePaginacion';
+import { Paginador } from '../../components/Paginador';
 import type { Category, Product } from '../../types';
 
 type Pestana = 'ACTIVOS' | 'BAJA';
@@ -66,6 +68,7 @@ export default function Products() {
         .filter((p) => coincideBusqueda(`${p.nombre} ${p.sku}`, search)),
     [productos, pestana, filtroCategoria, search],
   );
+  const pag = usePaginacion(visibles, [pestana, filtroCategoria, search]);
 
   function refrescar() {
     queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -174,7 +177,7 @@ export default function Products() {
         />
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {visibles.map((p) => {
+          {pag.visibles.map((p) => {
             const foto = urlArchivo(p.imageUrl);
             const margen = margenPct(p);
             return (
@@ -248,6 +251,7 @@ export default function Products() {
           })}
         </div>
       )}
+      <Paginador p={pag} etiqueta="productos" />
 
       {(creando || editando) && (
         <ProductoModal

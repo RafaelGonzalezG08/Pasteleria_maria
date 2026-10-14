@@ -381,20 +381,27 @@ function EditSaleModal({ sale, onClose, onDone }: { sale: Sale; onClose: () => v
                     {clientSearch ? 'Sin resultados.' : 'Escribe para buscar un cliente.'}
                   </p>
                 ) : (
-                  clientes.map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => {
-                        setCliente(c);
-                        setBuscandoCliente(false);
-                        setClientSearch('');
-                      }}
-                      className="flex w-full items-center justify-between px-2 py-2 text-left text-sm hover:bg-porcelain-100"
-                    >
-                      <span className="truncate text-ink">{c.nombre}</span>
-                      <span className="ml-2 shrink-0 text-xs text-muted">{c.telefono}</span>
-                    </button>
-                  ))
+                  <>
+                    {clientes.slice(0, 50).map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => {
+                          setCliente(c);
+                          setBuscandoCliente(false);
+                          setClientSearch('');
+                        }}
+                        className="flex w-full items-center justify-between px-2 py-2 text-left text-sm hover:bg-porcelain-100"
+                      >
+                        <span className="truncate text-ink">{c.nombre}</span>
+                        <span className="ml-2 shrink-0 text-xs text-muted">{c.telefono}</span>
+                      </button>
+                    ))}
+                    {clientes.length > 50 && (
+                      <p className="py-2 text-center text-xs text-muted">
+                        Mostrando 50 de {clientes.length}. Escribe para acotar la busqueda.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>

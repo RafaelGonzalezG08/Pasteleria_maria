@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { cobrosApi } from '../../api/cobros.api';
 import { formatMoney, formatDate, ESTADO_DEUDA_LABEL } from '../../lib/format';
 import { Card, PageHeader, Badge, EmptyState, Skeleton } from '../../components/ui';
+import { usePaginacion } from '../../lib/usePaginacion';
+import { Paginador } from '../../components/Paginador';
 import { DebtDetailModal } from '../../components/DebtDetailModal';
 import type { ClientDebt, EstadoDeuda } from '../../types';
 
@@ -29,6 +31,7 @@ export default function Cobros() {
     queryKey: ['client-debts', status],
     queryFn: () => cobrosApi.list(status),
   });
+  const pag = usePaginacion(debts, [status]);
 
   const totalPendiente = debts.reduce(
     (sum, d) => sum + (Number(d.amountTotal ?? 0) - Number(d.amountPaid ?? 0)),
@@ -74,7 +77,7 @@ export default function Cobros() {
         <>
           {/* Ventana angosta: tarjetas. El detalle completo (abonos, factura) vive en DebtDetailModal. */}
           <div className="space-y-2 md:hidden">
-            {debts.map((debt) => {
+            {pag.visibles.map((debt) => {
               const total = Number(debt.amountTotal ?? 0);
               const pagado = Number(debt.amountPaid ?? 0);
               const saldo = Math.max(0, total - pagado);
@@ -119,7 +122,7 @@ export default function Cobros() {
               </tr>
             </thead>
             <tbody className="divide-y divide-porcelain-200">
-              {debts.map((debt) => {
+              {pag.visibles.map((debt) => {
                 const total = Number(debt.amountTotal ?? 0);
                 const pagado = Number(debt.amountPaid ?? 0);
                 const saldo = Math.max(0, total - pagado);
@@ -149,6 +152,7 @@ export default function Cobros() {
             </tbody>
           </table>
           </Card>
+          <Paginador p={pag} etiqueta="cuentas" />
         </>
       )}
 

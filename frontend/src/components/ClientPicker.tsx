@@ -6,9 +6,12 @@ import { clientsApi } from '../api/clients.api';
 import { Card, Button } from './ui';
 import type { Client } from '../types';
 
+/** Cuantos clientes se dibujan a la vez en el buscador. */
+const MAX_RESULTADOS = 50;
+
 /**
- * Buscador de cliente reutilizado en el punto de venta y al atender un
- * pedido web: mismo flujo en los dos lugares, asi que vive en un solo sitio
+ * Buscador de cliente reutilizado en el punto de venta y en los encargos:
+ * mismo flujo en los dos lugares, asi que vive en un solo sitio
  * en vez de mantener dos copias que se puedan ir desalineando.
  *
  * Incluye "crear cliente" porque en el momento de cobrar es tipico
@@ -168,17 +171,27 @@ function ClientSearchModal({ onSelect, onClose }: { onSelect: (client: Client) =
                     {search ? 'Sin resultados.' : 'Escribe para buscar un cliente.'}
                   </p>
                 ) : (
-                  clients.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => onSelect(c)}
-                      className="block w-full border-b border-porcelain-100 px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-porcelain-100"
-                    >
-                      <span className="font-medium text-ink">{c.nombre}</span>{' '}
-                      <span className="text-xs text-muted">{c.telefono}</span>
-                    </button>
-                  ))
+                  <>
+                    {/* Con la busqueda vacia el servidor devuelve a TODOS los
+                        clientes (miles): dibujarlos todos congelaba el modal. */}
+                    {clients.slice(0, MAX_RESULTADOS).map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => onSelect(c)}
+                        className="block w-full border-b border-porcelain-100 px-3 py-2.5 text-left text-sm hover:bg-porcelain-100"
+                      >
+                        <span className="font-medium text-ink">{c.nombre}</span>{' '}
+                        <span className="text-xs text-muted">{c.telefono}</span>
+                      </button>
+                    ))}
+                    {clients.length > MAX_RESULTADOS && (
+                      <p className="px-3 py-2.5 text-xs text-muted">
+                        Mostrando {MAX_RESULTADOS} de {clients.length} clientes. Escribe un nombre o telefono para
+                        acotar la busqueda.
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>

@@ -4,6 +4,8 @@ import { reportsApi } from '../../api/reports.api';
 import { usePersistedState } from '../../lib/usePersistedState';
 import { formatMoney } from '../../lib/format';
 import { Card, PageHeader, Badge, EmptyState, Skeleton } from '../../components/ui';
+import { usePaginacion } from '../../lib/usePaginacion';
+import { Paginador } from '../../components/Paginador';
 import type { CostsReport } from '../../types';
 
 export default function Costs() {
@@ -19,6 +21,7 @@ export default function Costs() {
 
   const totales = data?.totales;
   const productos = data?.productos ?? [];
+  const pag = usePaginacion(productos, [from, to]);
 
   return (
     <div>
@@ -88,7 +91,7 @@ export default function Costs() {
           <>
             {/* Ventana angosta: tarjetas, con todos los numeros -- es un reporte de solo lectura, no hace falta un panel aparte. */}
             <div className="space-y-2 md:hidden">
-              {productos.map((p) => (
+              {pag.visibles.map((p) => (
                 <div key={p.productId ?? p.nombre} className="rounded-lg border border-porcelain-200 p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2">
@@ -138,7 +141,7 @@ export default function Costs() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-porcelain-200">
-                {productos.map((p) => (
+                {pag.visibles.map((p) => (
                   <tr key={p.productId ?? p.nombre}>
                     <td className="py-2.5 pr-3">
                       <div className="flex items-center gap-2">
@@ -165,6 +168,7 @@ export default function Costs() {
               </tbody>
             </table>
             </div>
+            <Paginador p={pag} etiqueta="productos" />
           </>
         )}
       </Card>

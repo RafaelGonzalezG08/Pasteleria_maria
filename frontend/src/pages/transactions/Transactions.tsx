@@ -6,6 +6,8 @@ import { transactionsApi } from '../../api/transactions.api';
 import { usePersistedState } from '../../lib/usePersistedState';
 import { formatMoney, formatDate, formatTime, formatDateTime, METODO_PAGO_LABEL, ESTADO_FACTURA_LABEL } from '../../lib/format';
 import { Card, PageHeader, Badge, EmptyState, Select, ConfirmPasswordModal, Skeleton } from '../../components/ui';
+import { usePaginacion } from '../../lib/usePaginacion';
+import { Paginador } from '../../components/Paginador';
 import { FacturaLightbox } from '../../components/FacturaImagen';
 import { useAuthStore } from '../../store/auth.store';
 import type { MetodoPago, Transaccion, TipoTransaccion, TransaccionesResponse } from '../../types';
@@ -127,6 +129,7 @@ export default function Transactions() {
   });
 
   const items = data?.items ?? [];
+  const pag = usePaginacion(items, [params]);
 
   const eliminar = useMutation({
     mutationFn: async (password: string) => {
@@ -298,7 +301,7 @@ export default function Transactions() {
         <>
           {/* Ventana angosta: tarjetas compactas; el detalle completo va en TransaccionDetailModal. */}
           <div className="space-y-2 md:hidden">
-            {items.map((t) => (
+            {pag.visibles.map((t) => (
               <Card
                 key={t.id}
                 className="cursor-pointer p-3.5 active:shadow-neu-pressed"
@@ -342,7 +345,7 @@ export default function Transactions() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-porcelain-200">
-                {items.map((t) => (
+                {pag.visibles.map((t) => (
                   <tr key={t.id} className="hover:bg-porcelain-100">
                     <td className="whitespace-nowrap px-4 py-2.5 leading-tight text-muted">
                       <span className="block text-ink">{formatDate(t.fecha)}</span>
@@ -399,6 +402,7 @@ export default function Transactions() {
             {items.length} transaccion{items.length === 1 ? '' : 'es'} en este filtro.
           </p>
           </Card>
+          <Paginador p={pag} etiqueta="transacciones" />
         </>
       )}
 

@@ -13,6 +13,8 @@ import {
 } from '../../lib/format';
 import { OPCIONES_UNIDAD, opcionesCompatibles } from '../../lib/unidades';
 import { coincideBusqueda } from '../../lib/search';
+import { usePaginacion } from '../../lib/usePaginacion';
+import { Paginador } from '../../components/Paginador';
 import { useAuthStore } from '../../store/auth.store';
 import {
   Badge,
@@ -61,6 +63,7 @@ export default function Inventario() {
         .filter((i) => (filtro === 'BAJOS' ? i.bajoMinimo : filtro === 'VENCER' ? i.porVencer : true)),
     [insumos, search, filtro],
   );
+  const pag = usePaginacion(visibles, [search, filtro]);
   const bajos = insumos.filter((i) => i.bajoMinimo).length;
   const porVencer = insumos.filter((i) => i.porVencer).length;
   const valorTotal = insumos.reduce((s, i) => s + (i.valorStock ?? 0), 0);
@@ -141,7 +144,7 @@ export default function Inventario() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-porcelain-200">
-                  {visibles.map((i) => (
+                  {pag.visibles.map((i) => (
                     <tr key={i.id} onClick={() => setAbiertoId(i.id)} className="cursor-pointer hover:bg-porcelain-200/60">
                       <td className="px-4 py-3">
                         <p className="font-medium text-ink">{i.nombre}</p>
@@ -182,6 +185,7 @@ export default function Inventario() {
               </table>
             </Card>
           )}
+          <Paginador p={pag} etiqueta="insumos" />
         </>
       )}
 

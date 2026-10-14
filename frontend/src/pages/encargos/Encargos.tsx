@@ -6,6 +6,8 @@ import { encargosApi } from '../../api/encargos.api';
 import { useAuthStore } from '../../store/auth.store';
 import { ESTADO_ENCARGO_LABEL, fechaLocal, formatDate, formatMoney, formatTime } from '../../lib/format';
 import { Badge, Button, Card, EmptyState, PageHeader, Skeleton, Tabs } from '../../components/ui';
+import { usePaginacion } from '../../lib/usePaginacion';
+import { Paginador } from '../../components/Paginador';
 import { EncargoForm } from './EncargoForm';
 import { EncargoDetalle } from './EncargoDetalle';
 import { TONO_ESTADO, URGENCIA } from './estilos';
@@ -42,6 +44,7 @@ export default function Encargos() {
     queryFn: () => encargosApi.list({ estado: filtro || undefined, q: q || undefined }),
     enabled: vista === 'LISTA',
   });
+  const pag = usePaginacion(encargos, [filtro, q]);
 
   return (
     <div>
@@ -111,11 +114,12 @@ export default function Encargos() {
         />
       ) : (
         <div className="space-y-2">
-          {encargos.map((e) => (
+          {pag.visibles.map((e) => (
             <FilaEncargo key={e.id} encargo={e} onClick={() => abrir(e.id)} />
           ))}
         </div>
       )}
+      {vista === 'LISTA' && <Paginador p={pag} etiqueta="encargos" />}
 
       {creando && <EncargoForm onClose={() => setCreando(false)} onCreado={(id) => abrir(id)} />}
       {abiertoId && <EncargoDetalle id={abiertoId} onClose={() => abrir(null)} />}

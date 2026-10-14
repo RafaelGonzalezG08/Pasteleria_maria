@@ -6,6 +6,8 @@ import { clientsApi, type ClientePayload } from '../../api/clients.api';
 import { usePersistedState, limpiarBorrador } from '../../lib/usePersistedState';
 import { formatMoney, formatDate, ESTADO_DEUDA_LABEL, ESTADO_ENCARGO_LABEL, METODO_PAGO_LABEL } from '../../lib/format';
 import { Button, Card, PageHeader, Badge, EmptyState, Field, INPUT, Modal, Skeleton } from '../../components/ui';
+import { usePaginacion } from '../../lib/usePaginacion';
+import { Paginador } from '../../components/Paginador';
 import { DebtDetailModal } from '../../components/DebtDetailModal';
 import { SaleDetailModal } from '../../components/SaleDetailModal';
 import { useAuthStore } from '../../store/auth.store';
@@ -37,6 +39,7 @@ export default function Clients() {
     queryKey: ['clients', 'all', search],
     queryFn: () => clientsApi.search(search),
   });
+  const pag = usePaginacion(clients, [search]);
 
   const bulkEliminar = useMutation({
     mutationFn: () => clientsApi.bulkDelete([...seleccionados]),
@@ -144,7 +147,7 @@ export default function Clients() {
         <EmptyState title="Sin clientes" description="Registra tu primer cliente para empezar." />
       ) : (
         <Card className="divide-y divide-porcelain-200 overflow-hidden">
-          {clients.map((c) => (
+          {pag.visibles.map((c) => (
             <button
               key={c.id}
               onClick={() => (modoSeleccion ? toggleSeleccion(c.id) : setSelectedId(c.id))}
@@ -179,6 +182,7 @@ export default function Clients() {
           ))}
         </Card>
       )}
+      <Paginador p={pag} etiqueta="clientes" />
 
       {showForm && (
         <ClienteFormModal

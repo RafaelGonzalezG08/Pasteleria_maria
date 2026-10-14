@@ -6,6 +6,8 @@ import { expensesApi } from '../../api/expenses.api';
 import { usePersistedState } from '../../lib/usePersistedState';
 import { formatMoney, formatDate } from '../../lib/format';
 import { Button, Card, PageHeader, EmptyState, ConfirmPasswordModal, Skeleton } from '../../components/ui';
+import { usePaginacion } from '../../lib/usePaginacion';
+import { Paginador } from '../../components/Paginador';
 import type { Expense } from '../../types';
 
 export default function Expenses() {
@@ -18,6 +20,7 @@ export default function Expenses() {
     queryKey: ['expenses'],
     queryFn: () => expensesApi.list(),
   });
+  const pag = usePaginacion(expenses);
 
   const createExpense = useMutation({
     mutationFn: () => expensesApi.create({ ...form, monto: Number(form.monto) }),
@@ -69,7 +72,7 @@ export default function Expenses() {
             <EmptyState title="Sin gastos registrados" />
           ) : (
             <Card className="divide-y divide-porcelain-200 overflow-hidden">
-              {expenses.map((g) => (
+              {pag.visibles.map((g) => (
                 <div key={g.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
                   <div className="min-w-0">
                     <p className="truncate font-medium text-ink">{g.descripcion}</p>
@@ -92,6 +95,7 @@ export default function Expenses() {
               ))}
             </Card>
           )}
+          <Paginador p={pag} etiqueta="gastos" />
         </div>
 
         <Card className="order-1 h-fit p-4 lg:order-2">

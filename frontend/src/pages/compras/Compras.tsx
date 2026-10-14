@@ -6,6 +6,8 @@ import { comprasApi, insumosApi, proveedoresApi, type CompraPayload } from '../.
 import { fechaLocal, formatCantidad, formatDate, formatMoney } from '../../lib/format';
 import { opcionesCompatibles, OPCIONES_UNIDAD } from '../../lib/unidades';
 import { Button, Card, EmptyState, Field, INPUT, Modal, PageHeader, Select, Skeleton, Tabs } from '../../components/ui';
+import { usePaginacion } from '../../lib/usePaginacion';
+import { Paginador } from '../../components/Paginador';
 import type { Compra, Insumo, Proveedor } from '../../types';
 
 type Pestana = 'COMPRAS' | 'PROVEEDORES';
@@ -61,6 +63,7 @@ function ListaCompras() {
     queryKey: ['compras', from, to],
     queryFn: () => comprasApi.list({ from: from || undefined, to: to || undefined }),
   });
+  const pag = usePaginacion(compras, [from, to]);
   const { data: detalle } = useQuery<Compra>({
     queryKey: ['compra', abierta],
     queryFn: () => comprasApi.get(abierta!),
@@ -97,7 +100,7 @@ function ListaCompras() {
         <EmptyState title="Sin compras registradas" description="Registra lo que le compras a tus proveedores para mantener el inventario y los costos al dia." />
       ) : (
         <Card className="divide-y divide-porcelain-200 overflow-hidden">
-          {compras.map((c) => (
+          {pag.visibles.map((c) => (
             <button key={c.id} onClick={() => setAbierta(c.id)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm hover:bg-porcelain-200/60">
               <div className="min-w-0">
                 <p className="truncate font-medium text-ink">{c.proveedor?.nombre ?? 'Sin proveedor'}</p>
@@ -111,6 +114,7 @@ function ListaCompras() {
           ))}
         </Card>
       )}
+      <Paginador p={pag} etiqueta="compras" />
 
       {abierta && (
         <Modal titulo="Detalle de la compra" onClose={() => setAbierta(null)}>
