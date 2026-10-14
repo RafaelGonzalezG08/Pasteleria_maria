@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CakeSlice, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import logoCompleto from '../assets/logo-rosa-delicias.png';
 import { authApi } from '../api/auth.api';
 import { useAuthStore } from '../store/auth.store';
 import {
@@ -15,10 +16,12 @@ import { Button } from '../components/ui';
 function Encabezado({ subtitulo }: { subtitulo: string }) {
   return (
     <div className="mb-8 flex flex-col items-center text-center">
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-copper-400 to-copper-600 shadow-neu-sm">
-        <CakeSlice size={24} className="text-white" />
+      {/* Tarjeta crema (el fondo original del logo) en los dos temas: el verde
+          oliva del nombre no se leeria sobre el fondo oscuro. */}
+      <div className="mb-4 rounded-2xl bg-[#f4f5f0] px-6 py-4 shadow-neu-sm">
+        <img src={logoCompleto} alt="" className="h-52 w-auto" />
       </div>
-      <h1 className="font-display text-xl font-bold text-ink">Rosa Delicias</h1>
+      <h1 className="sr-only">Rosa Delicias</h1>
       <p className="mt-1 text-sm text-muted">{subtitulo}</p>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import insignia from '../assets/insignia-rosa-delicias.png';
 import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
@@ -103,18 +104,20 @@ export function Layout() {
           className="flex shrink-0 items-center gap-2.5 px-5 pb-5"
           style={{ paddingTop: 'max(1.25rem, env(safe-area-inset-top))' }}
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-copper-400 to-copper-600 shadow-neu-sm">
+          {/* Fondo crema, el del logo original, tambien en modo oscuro. */}
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#f4f5f0] shadow-neu-sm">
             {logoSrc ? (
               <img src={logoSrc} alt="Logo" className="h-full w-full object-cover" />
             ) : (
-              <CakeSlice size={18} strokeWidth={2.25} className="text-white" />
+              <img src={insignia} alt="" className="h-12 w-12 object-contain" />
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-display text-[15px] font-bold leading-none tracking-tight text-ink">
+            {/* Misma letra con remate e inclinada del nombre en el logo. */}
+            <p className="truncate font-lema text-[19px] font-semibold italic leading-tight text-sage-600">
               {profile?.nombre || 'Rosa Delicias'}
             </p>
-            <p className="mt-1 font-lema text-[13px] italic leading-none text-sage-600">
+            <p className="mt-0.5 font-lema text-[12.5px] italic leading-none text-copper-600">
               hecho con cariño
             </p>
           </div>

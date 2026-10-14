@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { CakeSlice } from 'lucide-react';
+import insignia from '../assets/insignia-rosa-delicias.png';
 
 /** Mismos valores que ALTO_BARRA_TITULO / COLOR_BARRA_TITULO / COLOR_SIMBOLOS_BARRA en desktop/main.js (y --alto-barra en index.css). */
 const ALTO_PX = 36;
-const COLOR_BARRA = '#f8b8c9';
-const COLOR_TEXTO = '#3a2830';
+const COLOR_BARRA = '#f2bec4';
+const COLOR_TEXTO = '#4a5a1e';
 
 interface WindowControlsOverlay {
   visible: boolean;
@@ -53,10 +53,8 @@ export function BarraTitulo() {
       // ya no coincidiria con los botones nativos que Windows pinta encima.
       style={{ height: ALTO_PX, backgroundColor: COLOR_BARRA, color: COLOR_TEXTO, WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
-      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/50">
-        <CakeSlice size={12} />
-      </span>
-      <span className="font-display text-[13px] font-semibold tracking-wide">Rosa Delicias</span>
+      <img src={insignia} alt="" className="h-7 w-7 object-contain" />
+      <span className="font-lema text-[14px] font-semibold italic tracking-wide">Rosa Delicias</span>
     </div>
   );
 }

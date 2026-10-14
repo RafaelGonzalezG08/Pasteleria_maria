@@ -11,6 +11,7 @@ import { WhatsappService } from './whatsapp.service';
 import { WhatsappQueueService } from './whatsapp-queue.service';
 import { renderInvoiceHtml } from './invoice.template';
 import { NOMBRE_NEGOCIO_POR_DEFECTO } from '../common/negocio';
+import { LOGO_POR_DEFECTO } from './logo-por-defecto';
 
 @Injectable()
 export class InvoicesService {
@@ -173,12 +174,12 @@ export class InvoicesService {
    * en un data URI base64, para que se vea en la factura. Si ya es una URL
    * absoluta (BACKEND_PUBLIC_URL configurado) se deja tal cual, porque esa
    * si carga bien desde cualquier pagina. Si el archivo no se puede leer, la
-   * factura sigue generandose igual, solo que sin logo.
+   * factura sale con el logo de Rosa Delicias (igual si no se subio ninguno).
    */
   private async resolverLogoParaFactura(
     logoUrl: string | null | undefined,
-  ): Promise<string | null> {
-    if (!logoUrl) return null;
+  ): Promise<string> {
+    if (!logoUrl) return LOGO_POR_DEFECTO;
     if (/^https?:\/\//i.test(logoUrl)) return logoUrl;
 
     const relativa = logoUrl.replace(/^\/uploads\//, '');
@@ -192,7 +193,7 @@ export class InvoicesService {
       this.logger.warn(
         `No se pudo leer el logo (${ruta}) para incrustarlo en la factura: ${error}`,
       );
-      return null;
+      return LOGO_POR_DEFECTO;
     }
   }
 

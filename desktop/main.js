@@ -86,7 +86,8 @@ function hasPendingUpdateMarker() {
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
     width: 420,
-    height: 260,
+    // Alto para el logo completo (ver splash.html).
+    height: 340,
     frame: false,
     resizable: false,
     center: true,
@@ -215,12 +216,12 @@ function launchWhatsappAgent() {
   }
 }
 
-// Rosa pastel de la marca (copper-300 de frontend/src/index.css) con simbolos
-// ciruela (blanco no se leia sobre el pastel), y alto de la barra de
+// Rosa pastel del logo (copper-300 de frontend/src/index.css) con simbolos
+// verde oliva del logo (blanco no se leia sobre el pastel), y alto de la barra de
 // titulo. El alto tiene que coincidir con --alto-barra en index.css y con
 // ALTO_PX en BarraTitulo.tsx.
-const COLOR_BARRA_TITULO = '#f8b8c9';
-const COLOR_SIMBOLOS_BARRA = '#3a2830';
+const COLOR_BARRA_TITULO = '#f2bec4';
+const COLOR_SIMBOLOS_BARRA = '#4a5a1e';
 const ALTO_BARRA_TITULO = 36;
 
 /**

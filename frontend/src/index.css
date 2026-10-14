@@ -7,9 +7,9 @@
  * Tailwind: bg-copper-500/20, etc.). El tema claro vive en :root; el oscuro
  * solo redefine lo que cambia bajo .dark (que pone/quita useTheme.ts).
  *
- * Rosa Delicias: ROSA PASTEL de color principal (copper-*, el nombre de la
+ * Rosa Delicias: los dos colores del logo. ROSA PASTEL (#F2BEC4) de color principal (copper-*, el nombre de la
  * clase se quedo de la app original para no tocar cada pantalla) y VERDE
- * PISTACHO de segundo color: la barra lateral, lo "listo / pagado" (sage-*) y
+ * PISTACHO / OLIVA (#526024, el del nombre en el logo) de segundo color: la barra lateral, lo "listo / pagado" (sage-*) y
  * los detalles. El modo oscuro es un ciruela-rosado, no un negro, con la
  * barra lateral en un pistacho profundo.
  */
@@ -21,27 +21,27 @@
 
   /* Fondo rosado casi blanco; la barra lateral, crema de pistacho. */
   --c-porcelain-50: 255 255 255;
-  --c-porcelain-100: 252 243 245;
-  --c-porcelain-200: 246 232 236;
-  --c-porcelain-300: 238 219 225;
-  --c-porcelain-side: 234 242 222;
+  --c-porcelain-100: 251 245 244;
+  --c-porcelain-200: 245 236 236;
+  --c-porcelain-300: 236 224 225;
+  --c-porcelain-side: 237 242 225;
 
-  /* Rosa pastel (#FFE2E9 … #E888A2) con dos tonos mas firmes (600/700) para
+  /* Rosa pastel del logo (#FCE6E8 … #F2BEC4 … #DE92A0) con dos tonos mas firmes (600/700) para
      textos y botones: el pastel puro no se lee sobre fondo claro. */
-  --c-copper-50: 255 242 245;
-  --c-copper-100: 255 226 233;
-  --c-copper-200: 252 206 218;
-  --c-copper-300: 248 184 201;
-  --c-copper-400: 242 160 183;
-  --c-copper-500: 232 136 162;
-  --c-copper-600: 211 106 136;
-  --c-copper-700: 176 76 106;
+  --c-copper-50: 254 243 244;
+  --c-copper-100: 252 230 232;
+  --c-copper-200: 248 212 216;
+  --c-copper-300: 242 190 196;
+  --c-copper-400: 234 168 178;
+  --c-copper-500: 222 146 160;
+  --c-copper-600: 196 112 130;
+  --c-copper-700: 160 82 100;
 
-  /* Verde pistacho (#E5F0D5 … #86B352) y derivados oscuros para el texto. */
-  --c-sage-100: 229 240 213;
-  --c-sage-500: 134 179 82;
-  --c-sage-600: 88 128 46;
-  --c-sage-700: 64 98 32;
+  /* Pistacho de las alas (#E5EED4) hasta el oliva del nombre (#526024). */
+  --c-sage-100: 229 238 212;
+  --c-sage-500: 128 150 64;
+  --c-sage-600: 82 96 36;
+  --c-sage-700: 62 74 24;
 
   /* Frambuesa (alertas, deuda): distinto del rosa para que se note. */
   --c-brick-100: 246 216 222;
@@ -55,11 +55,11 @@
   --c-rose-500: 214 98 140;
   --c-rose-600: 170 66 106;
 
-  --c-ink: 58 40 48;
-  --c-muted: 150 126 135;
+  --c-ink: 56 44 46;
+  --c-muted: 142 124 126;
 
   /* Relieve neumorfico: sombra (abajo-derecha) y luz (arriba-izquierda). */
-  --neu-lo: 225 205 212;
+  --neu-lo: 226 212 212;
   --neu-hi: 255 255 255;
 
   color-scheme: light;
@@ -72,20 +72,20 @@
   --c-porcelain-100: 110 89 98;
   --c-porcelain-200: 125 102 111;
   --c-porcelain-300: 143 119 128;
-  --c-porcelain-side: 76 90 69;
+  --c-porcelain-side: 78 88 58;
 
   --c-copper-50: 132 101 112;
   --c-copper-100: 146 112 124;
-  --c-copper-600: 248 184 201;
-  --c-copper-700: 252 206 218;
+  --c-copper-600: 246 196 202;
+  --c-copper-700: 250 214 218;
 
   /* Pistacho claro sobre el fondo oscuro. sage-700 hay que definirlo aqui SI
      o SI: sin esto quedaba verde oscuro sobre verde oscuro y no se leia
      (chip "WhatsApp conectado", insignia "OneDrive"). */
-  --c-sage-100: 86 104 72;
-  --c-sage-500: 150 196 98;
-  --c-sage-600: 186 220 142;
-  --c-sage-700: 206 232 170;
+  --c-sage-100: 86 98 60;
+  --c-sage-500: 160 184 96;
+  --c-sage-600: 200 216 140;
+  --c-sage-700: 218 230 172;
 
   --c-brick-100: 108 70 84;
   --c-brick-500: 214 96 124;
@@ -107,12 +107,12 @@
 /* La barra lateral es de otro color (pistacho): su relieve se calcula sobre
    ese verde y no sobre el rosado de las paginas, o las sombras se ven sucias. */
 .bg-porcelain-side {
-  --neu-lo: 208 222 190;
-  --neu-hi: 250 253 245;
+  --neu-lo: 212 220 194;
+  --neu-hi: 252 253 247;
 }
 .dark .bg-porcelain-side {
-  --neu-lo: 60 72 54;
-  --neu-hi: 96 112 88;
+  --neu-lo: 62 70 44;
+  --neu-hi: 98 110 74;
 }
 
 html, body, #root {
