@@ -24,6 +24,8 @@ backend/backups/
 # tambien las migraciones: al clonar o hacer pull en otra PC llegaba el codigo
 # nuevo pero no el SQL que crea las tablas que ese codigo necesita.
 !backend/prisma/migrations/**/*.sql
+# ...y los SQL de ejemplo de las pruebas (simulan una migracion).
+!backend/test/fixtures/*.sql
 /uploads/
 
 # Archivos de registros y temporales

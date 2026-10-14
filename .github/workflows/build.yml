@@ -56,7 +56,11 @@ jobs:
         run: |
           $zip = "$env:RUNNER_TEMP\ahk.zip"
           $dir = "$env:RUNNER_TEMP\ahk"
-          Invoke-WebRequest -Uri "https://www.autohotkey.com/download/1.1/AutoHotkey_1.1.37.02.zip" -OutFile $zip
+          # Del release oficial en GitHub y no de autohotkey.com: ese sitio pone
+          # una verificacion de Cloudflare que bloquea a los runners de Actions.
+          Invoke-WebRequest -Uri "https://github.com/AutoHotkey/AutoHotkey/releases/download/v1.1.37.02/AutoHotkey_1.1.37.02.zip" -OutFile $zip
+          $hash = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne "6f3663f7cdd25063c8c8728f5d9b07813ced8780522fd1f124ba539e2854215f") { throw "El zip de AutoHotkey no coincide con la huella esperada ($hash)." }
           Expand-Archive -Path $zip -DestinationPath $dir -Force
           $compilador = Get-ChildItem -Path $dir -Recurse -Filter "Ahk2Exe.exe" | Select-Object -First 1
           $bin = Get-ChildItem -Path $dir -Recurse -Filter "Unicode 64-bit.bin" | Select-Object -First 1
